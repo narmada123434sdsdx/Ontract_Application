@@ -1,0 +1,126 @@
+/* ================================
+   CONTRACTOR – CLEAN WORKORDERS LIST
+================================ */
+
+/* Page wrapper */
+.workorders-fullpage-container {
+  padding: 30px;
+  min-height: 100vh;
+  background: #f7faff;
+  display: flex;
+  justify-content: center;
+}
+
+/* Inner content box */
+.workorders-content {
+  width: 100%;
+  max-width: 1100px;
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(44, 120, 201, 0.15);
+}
+.workorders-content h2 {
+  display: block !important;   /* overrides global display:flex */
+  text-align: center;
+}
+
+
+/* Table wrapper */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+/* Workorders table */
+.workorders-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.workorders-table th {
+  background-color: #2c78c9;
+  color: white;
+  padding: 10px;
+  text-align: left;
+}
+
+.workorders-table td {
+  padding: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #333;
+}
+
+/* Alternate rows */
+.workorders-table tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+/* Row hover */
+.workorders-table tr:hover {
+  background: #eaf2f9;
+  cursor: pointer;
+}
+
+/* Clickable workorder ID */
+.workorder-link {
+  color: #007bff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.workorder-link:hover {
+  text-decoration: underline;
+}
+
+/* Status colors */
+.status.open {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.status.accepted {
+  color: #007bff;
+  font-weight: 600;
+}
+
+.status.rejected {
+  color: #ff4d4d;
+  font-weight: 600;
+}
+
+.status.completed {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.status.inprogress {
+  color: greenyellow;
+  font-weight: 600;
+}
+
+/* Center align for "Loading" / "Error" */
+.center {
+  text-align: center;
+  padding: 20px;
+  font-size: 16px;
+}
+
+.error {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .workorders-content {
+    padding: 15px;
+  }
+
+  .workorders-table th,
+  .workorders-table td {
+    padding: 8px;
+    font-size: 13px;
+  }
+}
