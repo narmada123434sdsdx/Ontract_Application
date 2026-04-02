@@ -130,7 +130,7 @@ console.log("logina admin detils",permissionLevel)
               trend.startsWith("+") ? "text-green-600" : "text-red-600"
             }`}>
               <TrendingUp className="w-4 h-4 mr-1" />
-              {trend} from last month
+              {trend} from last months
             </span>
           )}
         </div>
@@ -149,7 +149,7 @@ console.log("logina admin detils",permissionLevel)
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-          <p className="text-gray-600">Welcome back! Here's your business overview</p>
+          <p className="text-gray-600">Welcome back! Here's your business overview.</p>
         </div>
 
         {/* ------------------------------------------
