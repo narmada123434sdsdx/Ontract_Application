@@ -11,7 +11,9 @@ Thumbs.db
 *.swp
 *.tmp
 
-
+node_modules/
+ontractapp/
+workorder_mobile/
 # Secrets / credentials
 backend/serviceAccountKey.json
 backend/*firebase*.json
