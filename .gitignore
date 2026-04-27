@@ -12,6 +12,12 @@ Thumbs.db
 *.tmp
 
 
+# Secrets / credentials
+backend/serviceAccountKey.json
+backend/*firebase*.json
+backend/*adminsdk*.json
+
+
 ####################################
 # BACKEND (Node / Python / Flask)
 ####################################
