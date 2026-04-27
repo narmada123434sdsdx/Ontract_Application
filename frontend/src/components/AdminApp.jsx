@@ -98,7 +98,7 @@ function AdminApp({ admin, setAdmin }) {
           </li>
 
           {/* 🔐 Permission-based menu */}
-          {(permissionLevel === 1 || permissionLevel === 2) && (
+          
             <li>
               <Link
                 to="/admin/standard_rate"
@@ -108,7 +108,7 @@ function AdminApp({ admin, setAdmin }) {
                 Standard Rate
               </Link>
             </li>
-          )}
+          
 
           <li>
             <Link

@@ -146,82 +146,98 @@ if (!contractor) {
     <div className="company-dashboard-page d-flex flex-column">
       {/* NAVBAR */}
       <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-        <div className="container-fluid px-4">
-          <Link
-            className="navbar-brand fw-bold text-primary d-flex align-items-center"
-            to="/contractor/dashboard/companydashboardhome"
-          >
-            <div className="brand-icon">OS</div>
-            <span className="ms-2">Ontract Services</span>
+  <div className="container-fluid px-4">
+
+    {/* LOGO */}
+    <Link
+      className="navbar-brand fw-bold text-primary d-flex align-items-center"
+      to="/contractor/dashboard/companydashboardhome"
+    >
+      <div className="brand-icon">OS</div>
+      <span className="ms-2">Ontract Services</span>
+    </Link>
+
+    {/* 🔥 MOBILE TOGGLER BUTTON */}
+    <button
+      className="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#contractorNavbar"
+      aria-controls="contractorNavbar"
+      aria-expanded="false"
+    >
+      <span className="navbar-toggler-icon"></span>
+    </button>
+
+    {/* 🔥 COLLAPSIBLE MENU */}
+    <div className="collapse navbar-collapse" id="contractorNavbar">
+      <ul className="navbar-nav ms-auto align-items-center">
+
+        <li className="nav-item">
+          <Link className="nav-link px-3" to="/contractor/dashboard/companydashboardhome">
+            Home
           </Link>
+        </li>
 
-          <div className="collapse navbar-collapse">
-            <ul className="navbar-nav ms-auto align-items-center">
-              <li className="nav-item">
-                <Link className="nav-link px-3" to="/contractor/dashboard/companydashboardhome">
-                  Home
-                </Link>
-              </li>
+        <li className="nav-item">
+          <Link
+            to="/contractor/dashboard/notifications"
+            className="nav-link position-relative px-3"
+          >
+            <FaBell size={20} className="text-primary" />
+            {unreadCount > 0 && (
+              <span className="notification-badge">{unreadCount}</span>
+            )}
+          </Link>
+        </li>
 
-              <li className="nav-item">
+        <li className="nav-item dropdown ms-2" ref={dropdownRef}>
+          <button
+            className="btn border-0 bg-transparent d-flex align-items-center gap-2"
+            onClick={toggleDropdown}
+          >
+            <FaUserCircle size={32} className="text-primary" />
+            <span className="d-none d-lg-inline text-dark">
+              {userName}
+            </span>
+          </button>
+
+          {dropdownOpen && (
+            <ul className="dropdown-menu dropdown-menu-end show mt-2">
+              <li>
                 <Link
-                  to="/contractor/dashboard/notifications"
-                  className="nav-link position-relative px-3"
+                  className="dropdown-item"
+                  to="/contractor/dashboard/updatecompanyprofile"
                 >
-                  <FaBell size={20} className="text-primary" />
-                  {unreadCount > 0 && (
-                    <span className="notification-badge">{unreadCount}</span>
-                  )}
+                  Profile
                 </Link>
               </li>
-
-              <li className="nav-item dropdown ms-2" ref={dropdownRef}>
-                <button
-                  className="btn border-0 bg-transparent d-flex align-items-center gap-2"
-                  onClick={toggleDropdown}
+              <li>
+                <Link
+                  className="dropdown-item"
+                  to="/contractor/dashboard/services"
                 >
-                  <FaUserCircle size={32} className="text-primary" />
-                  <span className="d-none d-lg-inline text-dark">
-                    {userName}
-                  </span>
+                  Services
+                </Link>
+              </li>
+              <li><hr className="dropdown-divider" /></li>
+              <li>
+                <button
+                  className="dropdown-item text-danger"
+                  onClick={handleLogout}
+                >
+                  Logout
                 </button>
-
-                {dropdownOpen && (
-                  <ul className="dropdown-menu dropdown-menu-end show mt-2">
-                    <li>
-                      <Link
-                        className="dropdown-item"
-                        to="/contractor/dashboard/updatecompanyprofile"
-                      >
-                        Profile
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        className="dropdown-item"
-                        to="/contractor/dashboard/services"
-                      >
-                        Services
-                      </Link>
-                    </li>
-                    <li>
-                      <hr className="dropdown-divider" />
-                    </li>
-                    <li>
-                      <button
-                        className="dropdown-item text-danger"
-                        onClick={handleLogout}
-                      >
-                        Logout
-                      </button>
-                    </li>
-                  </ul>
-                )}
               </li>
             </ul>
-          </div>
-        </div>
-      </nav>
+          )}
+        </li>
+
+      </ul>
+    </div>
+
+  </div>
+</nav>
 
       {/* MAIN CONTENT */}
       <div className="dashboard-content container-fluid mt-4 flex-grow-1">

@@ -1,149 +1,154 @@
-.pdf-bg {
+.inv-bg {
   background: #eeeeee;
-  padding: 30px;
+  padding: 30px 16px;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
-.pdf-page {
-  width: 190mm;          /* 🔥 A4 printable width */
-  margin: auto;
-  padding: 12mm;
+.inv-page {
+  width: 100%;
+  max-width: 950px;
   background: #fff;
+  padding: 40px;
   box-sizing: border-box;
   font-family: Arial, sans-serif;
-}
-
-.pdf-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logo-wordmark {
-  display: flex;
-  align-items: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
 
-/* 🔥 THIS FIXES YOUR ISSUE */
-.logo-o {
-  width: 64px;        /* 👈 BIG SIZE */
-  height: 64px;
-  min-width: 64px;
-  min-height: 64px;
-  max-width: 64px;
-  max-height: 64px;
-
-  object-fit: contain;
-
-  margin-right: -15px; /* space between logo & text */
-
-  user-select: none;
-  pointer-events: none;
+.inv-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
-.logo-text {
+.inv-logo-wordmark {
+  display: flex;
+  align-items: center;
+}
+
+.inv-logo-o {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin-right: -15px;
+}
+
+.inv-logo-text {
   font-size: 26px;
   font-weight: 700;
   color: #0b4f6c;
-  outline: none;
-  cursor: text;
 }
 
-.invoice-pill {
+.inv-pill {
   border: 2px solid #000;
   border-radius: 22px;
   padding: 6px 24px;
   font-size: 20px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
-.pdf-header {
+.inv-header {
   display: flex;
   justify-content: space-between;
+  gap: 30px;
   margin-top: 20px;
+  flex-wrap: wrap;
 }
 
-.pdf-table {
+.inv-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   margin-top: 20px;
 }
 
-.pdf-table th {
-  border: 2px solid #000;
-  border-radius: 20px;
-  padding: 8px;
+.inv-table th,
+.inv-table td {
+  border: 1px solid #d1d5db;
+  padding: 10px;
+  font-size: 12px;
+  word-break: break-word;
+  vertical-align: top;
 }
 
-.pdf-table td {
-  padding: 8px;
-  border-bottom: 1px solid #cccccc;
+.inv-table th {
+  background: #4e73df;
+  color: white;
 }
 
-.action-buttons {
+.inv-table input {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.inv-actions {
   margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.action-buttons button {
-  margin-right: 10px;
+.inv-actions button {
+  padding: 10px 16px;
+  border: 1px solid #000;
+  background: #fff;
+  cursor: pointer;
 }
 
-.action-buttons.center {
-  text-align: center;
+.inv-center {
+  justify-content: center;
 }
 
-.total-box {
-  margin-top: 16px;
+.inv-total-box {
+  margin-top: 20px;
+  margin-left: auto;
+  width: fit-content;
   text-align: right;
-  padding-right: 10px;   /* 🔥 keeps it inside */
 }
 
-.total-box h3 {
-  font-size: 18px;       /* smaller */
+.inv-total-box h3 {
+  margin-top: 8px;
 }
 
-.terms {
+.inv-terms {
   margin-top: 30px;
   font-size: 12px;
 }
 
-.sign {
+.inv-sign {
   display: flex;
   justify-content: space-between;
   margin-top: 40px;
+  gap: 20px;
 }
 
-.pdf-table {
-  width: 100%;
-  table-layout: fixed;       /* 🔥 CRITICAL */
-  border-collapse: collapse;
-  margin-top: 10px;
-}
+@media (max-width: 768px) {
+  .inv-page {
+    padding: 20px;
+  }
 
-.pdf-table td,
-.pdf-table th {
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  font-size: 12px;           /* slightly smaller */
-}
-.table-header-pill {
-  display: grid;
-  grid-template-columns: 20% 34% 8% 18% 20%;
-  align-items: center;
+  .inv-top,
+  .inv-header,
+  .inv-sign,
+  .inv-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 
-  border: 2px solid #000;
-  border-radius: 999px;
-  padding: 8px 12px;
-  margin-top: 24px;
+  .inv-actions button {
+    width: 100%;
+  }
 
-  font-size: 11px;           /* smaller text */
-  font-weight: 700;
-  text-transform: uppercase;
-
-  box-sizing: border-box;
-}
-
-.table-header-pill > div {
-  text-align: center;
-  white-space: nowrap;
+  .inv-table {
+    display: block;
+    overflow-x: auto;
+  }
 }

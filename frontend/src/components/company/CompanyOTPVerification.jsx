@@ -15,7 +15,6 @@ function CompanyOTPVerification() {
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
 
-  // ✅ CONTRACTOR CONTEXT (REPLACED USER CONTEXT)
   const { loginContractor } = useContractor();
 
   /* =========================
@@ -28,8 +27,6 @@ function CompanyOTPVerification() {
     setLoading(true);
 
     console.group("🔐 CONTRACTOR OTP VERIFY");
-    console.log("Email:", email);
-    console.log("OTP:", otp);
 
     try {
       const data = await apiPost("/api/contractor/verify_otp", {
@@ -42,28 +39,37 @@ function CompanyOTPVerification() {
       if (data?.contractor) {
         console.log("✅ OTP VERIFIED");
 
-        // 🔥 NORMALIZE CONTRACTOR DATA
+        // 🔥 CRITICAL FIX (mobile support)
+        if (data?.refresh_token) {
+          localStorage.setItem("refresh_token", data.refresh_token);
+        }
+
         const contractorData = {
           ...data.contractor,
           role: "CONTRACTOR",
         };
 
-        // ✅ STORE IN CONTRACTOR CONTEXT
         loginContractor(contractorData);
 
-        console.log("🧠 Contractor stored in ContractorContext");
+        console.log("🧠 Contractor stored in context");
 
-        // ✅ Prevent back navigation to OTP page
         navigate("/contractor/dashboard/companydashboardhome", {
           replace: true,
         });
       } else {
+        // ❌ cleanup old token (important)
+        localStorage.removeItem("refresh_token");
+
         console.error("❌ OTP FAILED:", data);
-        setError("Invalid OTP");
+        setError(data?.error || "Invalid OTP");
       }
     } catch (err) {
       console.error("🚨 VERIFY OTP ERROR:", err);
-      setError("Verification failed. Please try again.");
+
+      // ❌ cleanup on error also
+      localStorage.removeItem("refresh_token");
+
+      setError(err.message || "Verification failed. Please try again.");
     } finally {
       console.groupEnd();
       setLoading(false);
@@ -79,7 +85,6 @@ function CompanyOTPVerification() {
     setResendLoading(true);
 
     console.group("🔁 RESEND CONTRACTOR OTP");
-    console.log("Email:", email);
 
     try {
       const data = await apiPost("/api/contractor/resend_otp", {
@@ -90,7 +95,7 @@ function CompanyOTPVerification() {
       setMessage(data?.message || "OTP resent successfully!");
     } catch (err) {
       console.error("🚨 RESEND OTP ERROR:", err);
-      setError("Failed to resend OTP.");
+      setError(err.message || "Failed to resend OTP.");
     } finally {
       console.groupEnd();
       setResendLoading(false);

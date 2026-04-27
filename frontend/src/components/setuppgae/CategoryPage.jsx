@@ -10,11 +10,15 @@ const CategoryPage = () => {
 
   const [categories, setCategories] = useState([]);
   const [editingId, setEditingId] = useState(null);
+
+  // ✅ NEW: usage map for delete control
+  const [usageMap, setUsageMap] = useState({});
+
   // ✅ Filter values
-const [filters, setFilters] = useState({
-  category: "",
-  status: "",
-});
+  const [filters, setFilters] = useState({
+    category: "",
+    status: "",
+  });
 
   const [editingData, setEditingData] = useState({
     CATEGORY_NAME: "",
@@ -23,10 +27,37 @@ const [filters, setFilters] = useState({
 
   const cleanInput = (value) => value.replace(/[^A-Za-z0-9-.& ]/g, "");
 
+  // ✅ NEW: Check usage for all categories
+  const checkUsage = async (categoriesData) => {
+    try {
+      const map = {};
+
+      for (let cat of categoriesData) {
+        const res = await apiPost(
+          "/api/workorders/admin/category/usage-check",
+          {
+            category_id: cat.category_id,
+          }
+        );
+
+        map[cat.category_id] = res?.data?.is_used;
+      }
+
+      setUsageMap(map);
+    } catch (error) {
+      console.error("Usage check error:", error);
+    }
+  };
+
   const fetchCategories = async () => {
     try {
       const data = await apiGet("/api/category");
-      setCategories(Array.isArray(data) ? data : []);
+      const categoryList = Array.isArray(data) ? data : [];
+      setCategories(categoryList);
+
+      // ✅ NEW: call usage check
+      checkUsage(categoryList);
+
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
@@ -71,29 +102,34 @@ const [filters, setFilters] = useState({
     alert("Category status updated!");
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this category?")) return;
-    await apiDelete(`/api/category/${id}`);
-    fetchCategories();
+  // ✅ UPDATED DELETE (NO USAGE CHECK, NO ALERT)
+  const handleDelete = async (cat) => {
+    try {
+      if (!window.confirm("Delete this category?")) return;
+
+      await apiDelete(`/api/category/${cat.id}`);
+      fetchCategories();
+
+    } catch (error) {
+      console.error("Delete error:", error);
+    }
   };
 
   // ✅ Apply Filters
-const filteredCategories = categories.filter((cat) => {
-  return (
-    cat.category_name
-      .toLowerCase()
-      .includes(filters.category.toLowerCase()) &&
-    cat.status.toLowerCase().includes(filters.status.toLowerCase())
-  );
-});
+  const filteredCategories = categories.filter((cat) => {
+    return (
+      cat.category_name
+        .toLowerCase()
+        .includes(filters.category.toLowerCase()) &&
+      cat.status.toLowerCase().includes(filters.status.toLowerCase())
+    );
+  });
 
-// ✅ Handle filter input change
-const handleFilterChange = (e) => {
-  const { name, value } = e.target;
-  setFilters({ ...filters, [name]: value });
-};
-
-
+  // ✅ Handle filter input change
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters({ ...filters, [name]: value });
+  };
 
   return (
     <div className="category-page">
@@ -168,125 +204,121 @@ const handleFilterChange = (e) => {
 
           <div className="type-table-wrapper">
             <div className="fixed-table">
-            <table className="cat-table">
-<thead>
-  {/* ✅ Main Header Row */}
-  <tr>
-    <th>Work Category</th>
-    <th>Status</th>
-    <th>Actions</th>
-  </tr>
-
-  {/* ✅ Filter Input Row */}
-  <tr>
-    <th>
-      <input
-        type="text"
-        name="category"
-        placeholder="Filter category..."
-        value={filters.category}
-        onChange={handleFilterChange}
-        className="cat-filter-input"
-      />
-    </th>
-
-    <th>
-      <input
-        type="text"
-        name="status"
-        placeholder="Filter status..."
-        value={filters.status}
-        onChange={handleFilterChange}
-        className="cat-filter-input"
-      />
-    </th>
-
-    <th></th>
-  </tr>
-</thead>
-
-
-              <tbody>
-                {categories.length > 0 ? (
-                  filteredCategories.map((cat) => (
-
-                    <tr key={cat.id}>
-                      {editingId === cat.id ? (
-                        <>
-                          <td>
-                            <input
-                              type="text"
-                              name="CATEGORY_NAME"
-                              value={editingData.CATEGORY_NAME}
-                              onChange={handleEditChange}
-                            />
-                          </td>
-
-                          <td>
-                            <select
-                              name="STATUS"
-                              value={editingData.STATUS}
-                              onChange={handleEditChange}
-                            >
-                              <option value="Active">Active</option>
-                              <option value="Inactive">Inactive</option>
-                            </select>
-                          </td>
-
-                          <td>
-                            <button
-                              className="cat-btn-save"
-                              onClick={() => handleUpdate(cat.id)}
-                            >
-                              Save
-                            </button>
-                            <button
-                              className="cat-btn-cancel"
-                              onClick={() => setEditingId(null)}
-                            >
-                              Cancel
-                            </button>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td>{cat.category_name}</td>
-                          <td>{cat.status}</td>
-
-                          <td>
-                            <button
-                              className="cat-btn-edit"
-                              onClick={() => {
-                                setEditingId(cat.id);
-                                setEditingData({
-                                  CATEGORY_NAME: cat.category_name,
-                                  STATUS: cat.status,
-                                });
-                              }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="cat-btn-delete"
-                              onClick={() => handleDelete(cat.id)}
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  ))
-                ) : (
+              <table className="cat-table">
+                <thead>
                   <tr>
-                    <td colSpan="3" className="cat-no-data">
-                      No categories found
-                    </td>
+                    <th>Work Category</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                )}
-              </tbody>
 
-            </table>
+                  <tr>
+                    <th>
+                      <input
+                        type="text"
+                        name="category"
+                        placeholder="Filter category..."
+                        value={filters.category}
+                        onChange={handleFilterChange}
+                        className="cat-filter-input"
+                      />
+                    </th>
+
+                    <th>
+                      <input
+                        type="text"
+                        name="status"
+                        placeholder="Filter status..."
+                        value={filters.status}
+                        onChange={handleFilterChange}
+                        className="cat-filter-input"
+                      />
+                    </th>
+
+                    <th></th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {categories.length > 0 ? (
+                    filteredCategories.map((cat) => (
+
+                      <tr key={cat.id}>
+                        {editingId === cat.id ? (
+                          <>
+                            <td>
+                              {editingData.CATEGORY_NAME}
+                            </td>
+
+                            <td>
+                              <select
+                                name="STATUS"
+                                value={editingData.STATUS}
+                                onChange={handleEditChange}
+                              >
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                              </select>
+                            </td>
+
+                            <td>
+                              <button
+                                className="cat-btn-save"
+                                onClick={() => handleUpdate(cat.id)}
+                              >
+                                Save
+                              </button>
+                              <button
+                                className="cat-btn-cancel"
+                                onClick={() => setEditingId(null)}
+                              >
+                                Cancel
+                              </button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td>{cat.category_name}</td>
+                            <td>{cat.status}</td>
+
+                            <td>
+                              <button
+                                className="cat-btn-edit"
+                                onClick={() => {
+                                  setEditingId(cat.id);
+                                  setEditingData({
+                                    CATEGORY_NAME: cat.category_name,
+                                    STATUS: cat.status,
+                                  });
+                                }}
+                              >
+                                Edit
+                              </button>
+
+                              {/* ✅ DELETE BUTTON DISABLED BASED ON USAGE */}
+                              <button
+                                className="cat-btn-delete"
+                                disabled={usageMap[cat.category_id] === true}
+                                onClick={() => handleDelete(cat)}
+                              >
+                                Delete
+                              </button>
+
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="3" className="cat-no-data">
+                        No categories found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+
+              </table>
             </div>
           </div>
         </div>

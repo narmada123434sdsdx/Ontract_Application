@@ -14,6 +14,7 @@ const TypePage = () => {
   const [categories, setCategories] = useState([]);
   const [allItems, setAllItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
+  const [usageMap, setUsageMap] = useState({});
 
   const [editingId, setEditingId] = useState(null);
   // ✅ Filters for Existing Types Table
@@ -38,9 +39,16 @@ const [filters, setFilters] = useState({
   }, []);
 
   const loadData = async () => {
-    setCategories(await apiGet("/api/category"));
-    setTypes(await apiGet("/api/types"));
-    setAllItems(await apiGet("/api/items"));
+    const categoryData = await apiGet("/api/category");
+    const typeData = await apiGet("/api/types");
+    const itemData = await apiGet("/api/items");
+
+    setCategories(categoryData);
+    setTypes(typeData);
+    setAllItems(itemData);
+
+    // ✅ NEW: usage check
+    checkTypeUsage(typeData);
   };
 
   useEffect(() => {
@@ -72,7 +80,29 @@ const [filters, setFilters] = useState({
     if (editingId && editingData.CATEGORY_ID)
       loadFiltered(editingData.CATEGORY_ID);
   }, [editingData.CATEGORY_ID]);
+  const checkTypeUsage = async (typesData) => {
+  try {
+    const map = {};
 
+    for (let row of typesData) {
+      const res = await apiPost(
+        "/api/workorders/admin/type/usage-check",
+        {
+          category_id: row.category_id,
+          item_id: row.item_id,
+          type_id: row.type_id,
+        }
+      );
+
+      map[`${row.category_id}_${row.item_id}_${row.type_id}`] =
+        res?.data?.is_used;
+    }
+
+    setUsageMap(map);
+  } catch (error) {
+    console.error("Type usage check error:", error);
+  }
+};
   const handleEditChange = (e) => {
     const { name, value } = e.target;
     const cleaned =
@@ -121,7 +151,7 @@ const [filters, setFilters] = useState({
       STATUS: row.status,
     });
   };
-
+  
   const handleCancel = () => {
     setEditingId(null);
     setEditingData({
@@ -145,10 +175,10 @@ const [filters, setFilters] = useState({
     loadData();
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (row) => {
     if (!window.confirm("Delete?")) return;
-    await apiDelete(`/api/types/${id}`);
-    alert("Type Deleted");
+
+    await apiDelete(`/api/types/${row.id}`);
     loadData();
   };
 
@@ -381,14 +411,7 @@ const filteredTypes = types.filter((row) => {
                         <td>{cat?.category_name}</td>
                         <td>{it?.item_name}</td>
 
-                          <td>
-                            <input
-                              type="text"
-                              name="TYPE_NAME"
-                              value={editingData.TYPE_NAME}
-                              onChange={handleEditChange}
-                            />
-                          </td>
+                            <td>{editingData.TYPE_NAME}</td>
 
                           <td>
                             <select
@@ -435,7 +458,10 @@ const filteredTypes = types.filter((row) => {
                           </button>
                           <button
                             className="type-btn-delete"
-                            onClick={() => handleDelete(row.id)}
+                            disabled={
+                              usageMap[`${row.category_id}_${row.item_id}_${row.type_id}`] === true
+                            }
+                            onClick={() => handleDelete(row)}
                           >
                             Delete
                           </button>

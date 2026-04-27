@@ -72,6 +72,7 @@ def create_workorder():
             "ADDRESS": form.get("ADDRESS", "").strip(),
             "REQUESTED_TIME_CLOSING": form.get("REQUESTED_TIME_CLOSING", ""),
             "REMARKS": form.get("REMARKS", "").strip(),
+            "DETAILED_DESCRIPTION": form.get("DETAILED_DESCRIPTION", "").strip(),
             "STATUS": form.get("STATUS", "OPEN"),
             "created_by": form.get("ADMIN_ID", ""),
             "ticket_assignment_type": form.get("ticket_assignment_type", "auto"),
@@ -453,10 +454,13 @@ def close_workorder_api(workorder_code):
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
                 unique = f"{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{filename}"
-                save_path = os.path.join(UPLOAD_FOLDER, unique)
+                save_dir = os.path.join(UPLOAD_FOLDER, "workorderimages")
+                os.makedirs(save_dir, exist_ok=True)
+
+                save_path = os.path.join(save_dir, unique)
                 file.save(save_path)
 
-                saved_images.append(f"/uploads/{unique}")
+                saved_images.append(f"/uploads/workorderimages/{unique}")
 
         # Call model function
         updated, error = WorkOrder.close_workorder(workorder_code, saved_images)
@@ -729,7 +733,7 @@ def workorder_insert_admin_notification_close():
     except Exception as e:
         db.session.rollback()
         logging.exception("❌ Admin Notification Close Error")
-        return jsonify({"success": False, "error": str(e)}), 500   
+        return jsonify({"success": False, "error": str(e)}), 500  
         
         
         
@@ -899,4 +903,123 @@ def get_admin_overrated_workorder_details():
             f"Error fetching admin overrated workorder details: {e}",
             exc_info=True
         )
+        return jsonify({"error": str(e)}), 500
+
+@workorder_bp.route("/admin/category/usage-check", methods=["POST"])
+def check_category_usage():
+    try:
+        req_data = request.get_json()
+        category_id = req_data.get("category_id")
+
+        if not category_id:
+            return jsonify({"error": "category_id is required"}), 400
+
+        is_used = WorkOrder.get_category_usage(category_id)
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "category_id": category_id,
+                "is_used": is_used
+            }
+        }), 200
+
+    except Exception as e:
+        print("CONTROLLER ERROR:", str(e))
+        return jsonify({"error": str(e)}), 500
+
+@workorder_bp.route("/admin/item/usage-check", methods=["POST"])
+def check_item_usage():
+    try:
+        req_data = request.get_json()
+
+        category_id = req_data.get("category_id")
+        item_id = req_data.get("item_id")
+
+        # ✅ Validate both
+        if not category_id or not item_id:
+            return jsonify({
+                "error": "category_id and item_id are required"
+            }), 400
+
+        is_used = WorkOrder.get_item_usage(category_id, item_id)
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "category_id": category_id,
+                "item_id": item_id,
+                "is_used": is_used
+            }
+        }), 200
+
+    except Exception as e:
+        print("CONTROLLER ERROR:", str(e))
+        return jsonify({"error": str(e)}), 500
+    
+@workorder_bp.route("/admin/type/usage-check", methods=["POST"])
+def check_type_usage():
+    try:
+        req_data = request.get_json()
+
+        category_id = req_data.get("category_id")
+        item_id = req_data.get("item_id")
+        type_id = req_data.get("type_id")
+
+        # ✅ Validate ALL fields
+        if not category_id or not item_id or not type_id:
+            return jsonify({
+                "error": "category_id, item_id and type_id are required"
+            }), 400
+
+        is_used = WorkOrder.get_type_usage(category_id, item_id, type_id)
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "category_id": category_id,
+                "item_id": item_id,
+                "type_id": type_id,
+                "is_used": is_used
+            }
+        }), 200
+
+    except Exception as e:
+        print("CONTROLLER ERROR:", str(e))
+        return jsonify({"error": str(e)}), 500
+    
+
+@workorder_bp.route("/admin/description/usage-check", methods=["POST"])
+def check_description_usage():
+    try:
+        req_data = request.get_json()
+
+        category_id = req_data.get("category_id")
+        item_id = req_data.get("item_id")
+        type_id = req_data.get("type_id")
+        description_id = req_data.get("description_id")
+
+        # ✅ Validate ALL fields
+        if not category_id or not item_id or not type_id or not description_id:
+            return jsonify({
+                "error": "category_id, item_id, type_id and description_id are required"
+            }), 400
+
+        is_used = WorkOrder.get_description_usage(
+            category_id, item_id, type_id, description_id
+        )
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "category_id": category_id,
+                "item_id": item_id,
+                "type_id": type_id,
+                "description_id": description_id,
+                "is_used": is_used
+            }
+        }), 200
+
+    except Exception as e:
+        print("CONTROLLER ERROR:", str(e))
         return jsonify({"error": str(e)}), 500

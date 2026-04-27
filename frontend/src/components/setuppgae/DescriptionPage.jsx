@@ -17,6 +17,7 @@ const DescriptionPage = () => {
   const [typesAll, setTypesAll] = useState([]);
   const [items, setItems] = useState([]);
   const [types, setTypes] = useState([]);
+  const [usageMap, setUsageMap] = useState({});
 
   const [editingId, setEditingId] = useState(null);
   // ✅ Filters for Existing Descriptions Table
@@ -50,6 +51,7 @@ const [filters, setFilters] = useState({
     setDescriptions(desc || []);
     setItemsAll(allItems || []);
     setTypesAll(allTypes || []);
+    checkDescriptionUsage(desc || []);
   };
 
   const fetchItemsForCategory = async (categoryId) => {
@@ -100,6 +102,33 @@ const [filters, setFilters] = useState({
       if (name === "ITEM_ID") updated.TYPE_ID = "";
       return updated;
     });
+  };
+  
+  const checkDescriptionUsage = async (descData) => {
+    try {
+      const promises = descData.map((row) =>
+        apiPost("/api/workorders/admin/description/usage-check", {
+          category_id: row.category_id,
+          item_id: row.item_id,
+          type_id: row.type_id,
+          description_id: row.description_id,
+        }).then((res) => ({
+          key: `${row.category_id}_${row.item_id}_${row.type_id}_${row.description_id}`,
+          value: res?.data?.is_used ?? true, // safe default
+        }))
+      );
+
+      const results = await Promise.all(promises);
+
+      const map = {};
+      results.forEach((r) => {
+        map[r.key] = r.value;
+      });
+
+      setUsageMap(map);
+    } catch (error) {
+      console.error("Description usage check error:", error);
+    }
   };
 
   const handleEditChange = (e) => {
@@ -173,10 +202,9 @@ const [filters, setFilters] = useState({
     await loadData();
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (row) => {
     if (!window.confirm("Delete this description?")) return;
-    await apiDelete(`/api/description/${id}`);
-    alert("description deleted!");
+    await apiDelete(`/api/description/${row.id}`);
     await loadData();
   };
 
@@ -471,14 +499,8 @@ const selectedTypeName =
                         <>
                               <td>{cat?.category_name}</td>
     <td>{item?.item_name}</td>
-    <td>{type?.type_name}</td>                          <td>
-                            <textarea
-                              name="DESCRIPTION"
-                              value={editingData.DESCRIPTION}
-                              onChange={handleEditChange}
-                            />
-                          </td>
-
+    <td>{type?.type_name}</td>                            
+    <td>{editingData.DESCRIPTION}</td>
                           <td>
                             <select
                               name="STATUS"
@@ -527,7 +549,12 @@ const selectedTypeName =
                             </button>
                             <button
                               className="desc-btn-delete"
-                              onClick={() => handleDelete(row.id)}
+                              disabled={
+                                usageMap[
+                                  `${row.category_id}_${row.item_id}_${row.type_id}_${row.description_id}`
+                                ] === true
+                              }
+                              onClick={() => handleDelete(row)}
                             >
                               Delete
                             </button>

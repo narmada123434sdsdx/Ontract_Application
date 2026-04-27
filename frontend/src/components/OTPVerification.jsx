@@ -4,6 +4,10 @@ import "./css/otpverification.css";
 import { BASE_URLS } from '../api';
 import { useUser } from "../context/UserContext";
 
+// ✅ Firebase for WEB only
+import { getToken } from "firebase/messaging";
+import { messaging } from "../firebase";
+
 function OTPVerification() {
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
@@ -15,10 +19,8 @@ function OTPVerification() {
   const location = useLocation();
   const email = location.state?.email || '';
 
-  // 🔥 CONTEXT
   const { loginUser } = useUser();
 
-  // ⏳ Countdown logic
   useEffect(() => {
     let interval = null;
     if (timer > 0) {
@@ -27,44 +29,95 @@ function OTPVerification() {
     return () => clearInterval(interval);
   }, [timer]);
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError("");
-  setSuccess("");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
 
-  try {
-    const response = await fetch(`${BASE_URLS.user}/api/verify_otp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, otp }),
-    });
+    try {
+      const response = await fetch(`${BASE_URLS.user}/api/verify_otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    console.log("FULL RESPONSE FROM /api/verify_otp:", data);
+      if (response.ok && data?.user) {
 
-    if (response.ok && data?.user) {
-      console.log("✅ OTP VERIFIED");
+        const userData = {
+          ...data.user,
+          role: "INDIVIDUAL",
+        };
 
-      // 🔥 NORMALIZE DATA FOR GLOBAL CONTEXT (INDIVIDUAL)
-      const userData = {
-        ...data.user,
-        role: "INDIVIDUAL",
-      };
+        loginUser(userData);
 
-      console.log("🧠 INDIVIDUAL STORED IN CONTEXT:", userData);
+        console.log("🔥 OTP SUCCESS TRIGGERED");
 
-      loginUser(userData);
+        // 🔥 FLUTTER BRIDGE (CORRECT WAY)
+        window.addEventListener("flutterInAppWebViewPlatformReady", function () {
+          console.log("📱 Flutter detected");
 
-      navigate("/provider_home", { replace: true });
-    } else {
-      setError(data?.error || "OTP verification failed");
+          window.flutter_inappwebview.callHandler(
+            "saveToken",
+            userData.user_uid
+          );
+        });
+
+        // 🌐 WEB PUSH (ONLY IF NOT FLUTTER)
+        if (!window.flutter_inappwebview) {
+
+          console.log("🌐 Running in browser");
+
+          let fcmToken = null;
+
+          try {
+            const permission = await Notification.requestPermission();
+
+            if (permission === "granted") {
+              fcmToken = await getToken(messaging, {
+                vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+              });
+
+              console.log("🔥 WEB TOKEN:", fcmToken);
+            } else {
+              console.warn("❌ Notification permission denied");
+            }
+          } catch (err) {
+            console.error("❌ Token error:", err);
+          }
+
+          if (fcmToken) {
+            try {
+              await fetch(`${BASE_URLS.user}/api/save_token`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  user_id: userData.user_uid,
+                  fcm_token: fcmToken,
+                  device_type: "web",
+                }),
+              });
+
+              console.log("✅ Web token saved");
+            } catch (err) {
+              console.error("❌ Save token error:", err);
+            }
+          }
+        }
+
+        navigate("/provider_home", { replace: true });
+
+      } else {
+        setError(data?.error || "OTP verification failed");
+      }
+    } catch (err) {
+      console.error("❌ OTP VERIFY ERROR:", err);
+      setError("An error occurred. Please try again.");
     }
-  } catch (err) {
-    console.error("❌ OTP VERIFY ERROR:", err);
-    setError("An error occurred. Please try again.");
-  }
-};
+  };
 
   const handleResendOtp = async () => {
     setLoading(true);

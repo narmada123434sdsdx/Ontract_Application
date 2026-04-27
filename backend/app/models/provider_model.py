@@ -526,4 +526,97 @@ class ProviderModel:
             logging.error("===== BACKUP INSERT FAILED =====")
             logging.error(f"Error: {str(e)}")
             raise
+
+    @staticmethod
+    def save_token(user_id, fcm_token, device_type):
+        logging.info(f"checkinput in modelfuction: {user_id}")
+
+        try:
+            # 🔥 Step 1: deactivate old tokens
+            sql_update = text("""
+                UPDATE user_tokens SET status = 1 WHERE user_id = :user_id
+            """)
+
+            db.session.execute(sql_update, {"user_id": user_id})
+
+            # 🔥 Step 2: insert or update token
+            sql_insert = text("""
+                INSERT INTO user_tokens (user_id,fcm_token,device_type,
+                    status,created_at) VALUES (:user_id,:fcm_token,
+                    :device_type,0,CURRENT_TIMESTAMP
+                )
+                ON CONFLICT (fcm_token)
+                DO UPDATE SET 
+                    user_id = EXCLUDED.user_id,
+                    device_type = EXCLUDED.device_type,
+                    status = 0,
+                    updated_at = CURRENT_TIMESTAMP
+            """)
+
+            db.session.execute(sql_insert, {
+                "user_id": user_id,
+                "fcm_token": fcm_token,
+                "device_type": device_type
+            })
+
+            db.session.commit()
+
+            return True, None
+
+        except Exception as e:
+            db.session.rollback()
+            return False, str(e)
+        
+    
+    @staticmethod
+    def get_active_token_user_id(user_id):
+        logging.info(f"check inputactive token: {user_id}")
+        try:
+            sql = text("""
+                SELECT fcm_token FROM user_tokens WHERE user_id = :user_id 
+                AND status = 0 ORDER BY created_at DESC
+            """)
+
+            rows = db.session.execute(sql, {
+                "user_id": str(user_id)  
+            }).fetchall()
+
+            tokens = [row[0] for row in rows]
+            logging.info(f"checkoutput token: {tokens}")
+            return tokens, None
+
+        except Exception as e:
+            return [], str(e)
+
+    @staticmethod
+    def save_token(user_id, fcm_token, device_type):
+        logging.info(f"Saving token for user: {user_id}")
+
+        try:
+            # 🔥 STEP 1: DELETE OLD TOKENS
+            sql_delete = text("""
+                DELETE FROM user_tokens WHERE user_id = :user_id
+            """)
+            db.session.execute(sql_delete, {"user_id": user_id})
+
+            # 🔥 STEP 2: INSERT NEW TOKEN
+            sql_insert = text("""
+                INSERT INTO user_tokens (user_id,fcm_token,device_type,status,created_at) VALUES (
+                :user_id,:fcm_token,:device_type,0,CURRENT_TIMESTAMP)
+            """)
+
+            db.session.execute(sql_insert, {
+                "user_id": user_id,
+                "fcm_token": fcm_token,
+                "device_type": device_type
+            })
+
+            db.session.commit()
+
+            return True, None
+
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Token save error: {e}")
+            return False, str(e)
     

@@ -235,108 +235,122 @@ const InvoiceCreate = () => {
   /* ============================
      RENDER
   ============================ */
-  return (
-    <div className="pdf-bg">
-      <div className="pdf-page" ref={invoiceRef}>
-        {/* HEADER */}
-        <div className="pdf-top">
-          <div className="logo-wordmark">
-            <img src={logoSymbol} alt="O" className="logo-o" />
-            <span className="logo-text">ntract.ai</span>
-          </div>
-          <div className="invoice-pill">Invoice</div>
+ return (
+  <div className="inv-bg">
+    <div className="inv-page" ref={invoiceRef}>
+      {/* HEADER */}
+      <div className="inv-top">
+        <div className="inv-logo-wordmark">
+          <img src={logoSymbol} alt="O" className="inv-logo-o" />
+          <span className="inv-logo-text">ntract.ai</span>
+        </div>
+        <div className="inv-pill">Invoice</div>
+      </div>
+
+      {/* BILLING */}
+      <div className="inv-header">
+        <div>
+          <b>Billing & Delivery to:</b>
+          <p style={{ whiteSpace: "pre-line" }}>
+            {header.billingAddress}
+          </p>
         </div>
 
-        {/* BILLING */}
-        <div className="pdf-header">
-          <div>
-            <b>Billing & Delivery to:</b>
-            <p style={{ whiteSpace: "pre-line" }}>{header.billingAddress}</p>
-          </div>
-
-          <div>
-            <p>Invoice Date: {header.invoiceDate}</p>
-            <p>Invoice Number: {header.invoiceNo}</p>
-            <p>Supplier Number: {header.supplierNumber}</p>
-            <p>Supplier Name: {header.supplierName}</p>
-            <p>Supplier ID: {header.supplierIdentificationNumber}</p>
-            <p>Supplier TIN: {header.supplierTIN}</p>
-          </div>
-        </div>
-
-        {/* TABLE */}
-        <table className="pdf-table">
-          <thead>
-            <tr>
-              <th>Work Order No</th>
-              <th>Description</th>
-              <th>Qty</th>
-              <th>Unit Price (RM)</th>
-              <th>Subtotal (RM)</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {rows.map((r, i) => {
-              const isSpecial =
-                r.workorder === MATERIAL_ROW || r.workorder === CREDIT_ROW;
-
-              return (
-                <tr key={i}>
-                  <td>
-                    {isSpecial ? (
-                      r.workorder
-                    ) : (
-                      <input
-                        value={r.workorder}
-                        disabled={invoiceGenerated}
-                        onChange={(e) => handleWOChange(i, e.target.value)}
-                      />
-                    )}
-                  </td>
-
-                  <td style={{ whiteSpace: "pre-line" }}>{r.desc}</td>
-                  <td>{r.qty}</td>
-                  <td>{r.unit.toFixed(2)}</td>
-                  <td>{(r.qty * r.unit).toFixed(2)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-
-        {/* ACTIONS */}
-        <div className="action-buttons">
-          <button onClick={addRow}>+ Add Work Order</button>
-          <button onClick={submitInvoice}>Submit</button>
-          <button onClick={generateInvoice}>Generate Invoice</button>
-        </div>
-
-        {/* TOTALS */}
-        <div className="total-box">
-          <p>Subtotal: RM {subtotal.toFixed(2)}</p>
-          <p>SST (8%): RM {sst.toFixed(2)}</p>
-          <h3>TOTAL: RM {total.toFixed(2)}</h3>
-        </div>
-
-        <div className="terms">
-          <p>1. Currency in Malaysian Ringgit.</p>
-          <p>2. Invoice due within 14 days.</p>
-        </div>
-
-        <div className="sign">
-          <div>Received by:</div>
-          <div>Sign & Stamp</div>
-        </div>
-
-        <div className="action-buttons center">
-          <button onClick={downloadInvoice} disabled={!invoiceGenerated}>
-            Download PDF
-          </button>
+        <div>
+          <p>Invoice Date: {header.invoiceDate}</p>
+          <p>Invoice Number: {header.invoiceNo}</p>
+          <p>Supplier Number: {header.supplierNumber}</p>
+          <p>Supplier Name: {header.supplierName}</p>
+          <p>
+            Supplier ID: {header.supplierIdentificationNumber}
+          </p>
+          <p>Supplier TIN: {header.supplierTIN}</p>
         </div>
       </div>
+
+      {/* TABLE */}
+      <table className="inv-table">
+        <thead>
+          <tr>
+            <th>Work Order No</th>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Unit Price (RM)</th>
+            <th>Subtotal (RM)</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {rows.map((r, i) => {
+            const isSpecial =
+              r.workorder === MATERIAL_ROW ||
+              r.workorder === CREDIT_ROW;
+
+            return (
+              <tr key={i}>
+                <td>
+                  {isSpecial ? (
+                    <span>{r.workorder}</span>
+                  ) : (
+                    <input
+                      value={r.workorder}
+                      disabled={invoiceGenerated}
+                      onChange={(e) =>
+                        handleWOChange(i, e.target.value)
+                      }
+                    />
+                  )}
+                </td>
+
+                <td style={{ whiteSpace: "pre-line" }}>
+                  {r.desc}
+                </td>
+                <td>{r.qty}</td>
+                <td>{r.unit.toFixed(2)}</td>
+                <td>{(r.qty * r.unit).toFixed(2)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {/* ACTIONS */}
+      <div className="inv-actions">
+        <button onClick={addRow}>+ Add Work Order</button>
+        <button onClick={submitInvoice}>Submit</button>
+        <button onClick={generateInvoice}>
+          Generate Invoice
+        </button>
+      </div>
+
+      {/* TOTALS */}
+      <div className="inv-total-box">
+        <p>Subtotal: RM {subtotal.toFixed(2)}</p>
+        <p>SST (8%): RM {sst.toFixed(2)}</p>
+        <h3>TOTAL: RM {total.toFixed(2)}</h3>
+      </div>
+
+      <div className="inv-terms">
+        <p>1. Currency in Malaysian Ringgit.</p>
+        <p>2. Invoice due within 14 days.</p>
+      </div>
+
+      <div className="inv-sign">
+        <div>Received by:</div>
+        <div>Sign & Stamp</div>
+      </div>
+
+      <div className="inv-actions inv-center">
+        <button
+          onClick={downloadInvoice}
+          disabled={!invoiceGenerated}
+        >
+          Download PDF
+        </button>
+      </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default InvoiceCreate;

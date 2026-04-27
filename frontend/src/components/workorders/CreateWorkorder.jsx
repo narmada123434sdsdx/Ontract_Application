@@ -21,6 +21,7 @@ const CreateWorkOrder = () => {
   });
 
   // ===== CATEGORY → ITEM → TYPE → DESCRIPTION =====
+  const [detailedDescription, setDetailedDescription] = useState("");
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [types, setTypes] = useState([]);
@@ -216,6 +217,10 @@ const CreateWorkOrder = () => {
         formData.REQUESTED_TIME_CLOSING
       );
       formDataToSend.append("REMARKS", formData.REMARKS);
+       formDataToSend.append(
+        "DETAILED_DESCRIPTION",
+        detailedDescription || ""
+      );
       formDataToSend.append("STATUS", formData.STATUS);
       formDataToSend.append(
         "ticket_assignment_type",
@@ -530,6 +535,7 @@ const selectedDescriptionName =
             <div className="header-item">Assignment Type</div>
             <div className="header-item">Requested Time Closing</div>
             <div className="header-item">Remarks</div>
+            
           </div>
 
           <div className="combined-body">
@@ -541,6 +547,7 @@ const selectedDescriptionName =
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
               />
+              
               <span className="required-star">★</span>
             </div>
 
@@ -577,10 +584,28 @@ const selectedDescriptionName =
                 value={formData.REMARKS}
                 onChange={handleChange}
               />
+              
               <span className="required-star">★</span>
             </div>
           </div>
         </div>
+
+          <div className="form-group full-width combined-row">
+  <div className="combined-header single-header">
+    <div className="header-item">Detailed Description</div>
+  </div>
+
+  <div className="combined-body">
+    <div className="form-group">
+      <textarea
+        placeholder="Detailed Description"
+        value={detailedDescription}
+        onChange={(e) => setDetailedDescription(e.target.value)}
+        rows={3}
+      />
+    </div>
+  </div>
+</div>
 
         {/* IMAGE UPLOAD */}
         <div className="form-group full-width combined-row">

@@ -1,9 +1,14 @@
 {
   "name": "urban-web-application",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
+    "predev": "node version.js",
+    "prebuild": "node version.js",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
@@ -15,6 +20,7 @@
     "bootstrap": "^5.3.8",
     "cors": "^2.8.5",
     "file-saver": "^2.0.5",
+    "firebase": "^12.12.0",
     "html2pdf.js": "^0.12.1",
     "lucide-react": "^0.545.0",
     "react": "^19.1.1",

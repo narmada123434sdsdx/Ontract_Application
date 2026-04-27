@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify,make_response
 from app.controllers.contractor_controller import ContractorController
 
 contractor_bp = Blueprint('contractor_bp', __name__)
@@ -34,7 +34,77 @@ def login():
 def verify_otp():
     data = request.get_json()
     result, status = ContractorController.verify_otp(data)
-    return jsonify(result), status
+
+    response = make_response(jsonify(result), status)
+
+    # ✅ set 90 day persistent cookie
+    if status == 200 and "refresh_token" in result:
+        response.set_cookie(
+            "contractor_refresh_token",
+            result["refresh_token"],
+            httponly=True,
+            secure=True,
+            samesite="None",
+            max_age=90 * 24 * 60 * 60,
+            path="/"
+        )
+
+    return response
+
+
+
+@contractor_bp.route('/refresh_token', methods=['POST'])
+def refresh_token():
+    refresh_token = (
+    request.cookies.get("contractor_refresh_token")
+    or request.headers.get("Authorization", "").replace("Bearer ", "")
+)
+
+    if not refresh_token:
+        return jsonify({"error": "Refresh token missing"}), 401
+
+    result, status = ContractorController.refresh_token(refresh_token)
+
+    response = make_response(jsonify(result), status)
+
+    # rotate refresh token cookie if backend returns new one
+    if status == 200 and "refresh_token" in result:
+        response.delete_cookie(
+            "contractor_refresh_token",
+            path="/"
+        )
+
+        response.set_cookie(
+            "contractor_refresh_token",
+            result["refresh_token"],
+            httponly=True,
+            secure=True,
+            samesite="None",
+            max_age=90 * 24 * 60 * 60,
+            path="/"
+        )
+
+    return response
+
+
+@contractor_bp.route('/logout', methods=['POST'])
+def logout():
+    refresh_token = (
+    request.cookies.get("contractor_refresh_token")
+    or request.headers.get("Authorization", "").replace("Bearer ", "")
+)
+
+    result, status = ContractorController.logout(refresh_token)
+
+    response = make_response(jsonify(result), status)
+
+    # remove persistent login cookie
+    response.delete_cookie(
+        "contractor_refresh_token",
+        path="/"
+    )
+
+    return response
 
 @contractor_bp.route('/resend_otp', methods=['POST'])
 def resend_otp():

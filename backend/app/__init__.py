@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, abort
 from flask_cors import CORS
 from .models.database import db
 from app.config import Config
@@ -25,24 +25,34 @@ root_logger.addHandler(handler)
 root_logger.addHandler(logging.StreamHandler())
 
 
-def create_app(include_admin=True):   # 🔥 admin always enabled now
+def create_app(include_admin=True):
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # Serve uploaded files
+    # ---------------------------------------------------------
+    # Serve uploaded files (FIXED)
+    # ---------------------------------------------------------
     @app.route('/uploads/<path:filename>')
     def uploaded_files(filename):
-            try:
-                return send_from_directory(
-                    Config.UPLOAD_FOLDER,
-                    filename,
-                    as_attachment=True   # 🔥 THIS MAKES DOWNLOAD
-                )
-            except FileNotFoundError:
-                abort(404)
-                
-                
+        try:
+            base_dir = os.path.abspath(Config.UPLOAD_FOLDER)
+            file_path = os.path.join(base_dir, filename)
+
+            print("🔍 Looking for:", file_path)
+
+            if os.path.exists(file_path):
+                return send_from_directory(base_dir, filename)
+
+            print("❌ File not found")
+            return abort(404)
+
+        except Exception as e:
+            print("❌ Error:", e)
+            return abort(404)
+
+    # ---------------------------------------------------------
     # Init DB
+    # ---------------------------------------------------------
     db.init_app(app)
 
     # ---------------------------------------------------------
@@ -67,14 +77,11 @@ def create_app(include_admin=True):   # 🔥 admin always enabled now
 
     from app.views.master_view import master_bp
     from app.routes.admin_routes import admin_bp
-    
+
     from app.controllers.user_dashboard_controller import user_dashboard_bp
     from app.controllers.workorder_max_amount_controller import workorder_max_amount_bp
-    
     from app.controllers.invoice_controller import invoice_bp
-    
     from app.controllers.workorder_report_controller import workorder_report_bp
-
 
     # ---------------------------------------------------------
     # REGISTER ROUTES
@@ -98,28 +105,23 @@ def create_app(include_admin=True):   # 🔥 admin always enabled now
     app.register_blueprint(master_bp, url_prefix="/api")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
     app.register_blueprint(user_dashboard_bp, url_prefix="/api")
-    
+
     app.register_blueprint(workorder_max_amount_bp, url_prefix="/api")
     app.register_blueprint(invoice_bp)
-    
-    
     app.register_blueprint(workorder_report_bp, url_prefix="/api")
 
-    # ---------------------------------------------------------
-    # ADMIN ROUTES (always active)
-    # ---------------------------------------------------------
     if include_admin:
         from app.views.admin_routes import admin_bp
         app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
     # ---------------------------------------------------------
-    # CORS (AFTER all routes)
+    # CORS
     # ---------------------------------------------------------
     allowed_origins = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "https://kandi-cosmoramic-nonblindingly.ngrok-free.dev",
         "https://*.ngrok-free.app",
+        "https://*.devtunnels.ms",
         "*"
     ]
 
@@ -127,25 +129,15 @@ def create_app(include_admin=True):   # 🔥 admin always enabled now
         app,
         resources={
             r"/api/*": {"origins": allowed_origins},
-            r"/uploads/*": {"origins": allowed_origins}},
+            r"/uploads/*": {"origins": allowed_origins}
+        },
         supports_credentials=True,
         allow_headers=[
             "Content-Type",
             "Authorization",
-            "ngrok-skip-browser-warning"   # ✅ REQUIRED for ngrok to work
+            "ngrok-skip-browser-warning"
         ],
-
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     )
-
-    # ---------------------------------------------------------
-    # Scheduler
-    # ---------------------------------------------------------
-    try:
-        from app.automation.workorder_auto_assign import start_auto_scheduler
-        with app.app_context():
-            start_auto_scheduler(app)
-    except Exception as e:
-        logging.error("Scheduler failed", exc_info=True)
 
     return app

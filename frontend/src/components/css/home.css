@@ -32,3 +32,12 @@
 .footer a:hover {
   text-decoration: underline;
 }
+
+.role-card {
+  border-radius: 16px;
+  transition: transform 0.2s ease;
+}
+
+.role-card:hover {
+  transform: translateY(-4px);
+}

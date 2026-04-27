@@ -13,12 +13,16 @@ const ItemPage = () => {
   const [categories, setCategories] = useState([]);
 
   const [editingId, setEditingId] = useState(null);
+
+  // ✅ NEW: usage map
+  const [usageMap, setUsageMap] = useState({});
+
   // ✅ Filters for table search
-const [filters, setFilters] = useState({
-  category: "",
-  item: "",
-  status: "",
-});
+  const [filters, setFilters] = useState({
+    category: "",
+    item: "",
+    status: "",
+  });
 
   const [editingData, setEditingData] = useState({
     ITEM_NAME: "",
@@ -33,9 +37,37 @@ const [filters, setFilters] = useState({
     setCategories(Array.isArray(data) ? data : []);
   };
 
+  // ✅ NEW: usage check function
+  const checkItemUsage = async (itemsData) => {
+    try {
+      const map = {};
+
+      for (let item of itemsData) {
+        const res = await apiPost(
+          "/api/workorders/admin/item/usage-check",
+          {
+            category_id: item.category_id,
+            item_id: item.item_id,
+          }
+        );
+
+        map[`${item.category_id}_${item.item_id}`] = res?.data?.is_used;
+      }
+
+      setUsageMap(map);
+    } catch (error) {
+      console.error("Item usage check error:", error);
+    }
+  };
+
   const fetchItems = async () => {
     const data = await apiGet("/api/items");
-    setItems(Array.isArray(data) ? data : []);
+    const itemList = Array.isArray(data) ? data : [];
+
+    setItems(itemList);
+
+    // ✅ call usage check
+    checkItemUsage(itemList);
   };
 
   useEffect(() => {
@@ -95,34 +127,34 @@ const [filters, setFilters] = useState({
     fetchItems();
   };
 
-  const handleDelete = async (id) => {
+  // ✅ UPDATED DELETE (NO usage check here)
+  const handleDelete = async (item) => {
     if (!window.confirm("Delete this item?")) return;
-    await apiDelete(`/api/items/${id}`);
-    alert("item deleted!");
+
+    await apiDelete(`/api/items/${item.id}`);
     fetchItems();
   };
 
   // ✅ Handle filter typing
-const handleFilterChange = (e) => {
-  const { name, value } = e.target;
-  setFilters({ ...filters, [name]: value });
-};
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters({ ...filters, [name]: value });
+  };
 
-// ✅ Apply Filters to Items
-const filteredItems = items.filter((item) => {
-  const cat = categories.find(
-    (c) => c.category_id === item.category_id
-  );
+  // ✅ Apply Filters to Items
+  const filteredItems = items.filter((item) => {
+    const cat = categories.find(
+      (c) => c.category_id === item.category_id
+    );
 
-  const categoryName = cat?.category_name || "";
+    const categoryName = cat?.category_name || "";
 
-  return (
-    categoryName.toLowerCase().includes(filters.category.toLowerCase()) &&
-    item.item_name.toLowerCase().includes(filters.item.toLowerCase()) &&
-    item.status.toLowerCase().includes(filters.status.toLowerCase())
-  );
-});
-
+    return (
+      categoryName.toLowerCase().includes(filters.category.toLowerCase()) &&
+      item.item_name.toLowerCase().includes(filters.item.toLowerCase()) &&
+      item.status.toLowerCase().includes(filters.status.toLowerCase())
+    );
+  });
 
   return (
     <div className="item-page">
@@ -134,17 +166,14 @@ const filteredItems = items.filter((item) => {
 
           <form className="item-form" onSubmit={handleSubmit}>
 
-            {/* Header */}
             <div className="item-header-row">
               <div>WORK CATEGORY</div>
               <div>WORK ITEM </div>
               <div>STATUS</div>
             </div>
 
-            {/* Inputs */}
             <div className="item-input-row">
 
-              {/* Category */}
               <div className="item-input-wrapper">
                 <select
                   name="CATEGORY_ID"
@@ -162,7 +191,6 @@ const filteredItems = items.filter((item) => {
                 <span className="item-star">★</span>
               </div>
 
-              {/* Item Name */}
               <div className="item-input-wrapper">
                 <input
                   type="text"
@@ -175,7 +203,6 @@ const filteredItems = items.filter((item) => {
                 <span className="item-star">★</span>
               </div>
 
-              {/* Status */}
               <div className="item-input-wrapper">
                 <select
                   name="STATUS"
@@ -191,7 +218,6 @@ const filteredItems = items.filter((item) => {
 
             </div>
 
-            {/* Buttons */}
             <div className="item-actions">
               <button className="item-btn-primary" type="submit">Submit</button>
               <button
@@ -214,112 +240,110 @@ const filteredItems = items.filter((item) => {
 
           <div className="type-table-wrapper">
             <div className="fixed-table">
-            <table className="item-table">
-<thead>
-  {/* ✅ Main Header Row */}
-  <tr>
-    <th>Work Category</th>
-    <th>Work Item</th>
-    <th>Status</th>
-    <th>Actions</th>
-  </tr>
+              <table className="item-table">
+                <thead>
+                  <tr>
+                    <th>Work Category</th>
+                    <th>Work Item</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
 
-  {/* ✅ Filter Row */}
-  <tr>
-    <th>
-      <input
-        type="text"
-        name="category"
-        placeholder="Filter category..."
-        value={filters.category}
-        onChange={handleFilterChange}
-        className="item-filter-input"
-      />
-    </th>
+                  <tr>
+                    <th>
+                      <input
+                        type="text"
+                        name="category"
+                        placeholder="Filter category..."
+                        value={filters.category}
+                        onChange={handleFilterChange}
+                        className="item-filter-input"
+                      />
+                    </th>
 
-    <th>
-      <input
-        type="text"
-        name="item"
-        placeholder="Filter item..."
-        value={filters.item}
-        onChange={handleFilterChange}
-        className="item-filter-input"
-      />
-    </th>
+                    <th>
+                      <input
+                        type="text"
+                        name="item"
+                        placeholder="Filter item..."
+                        value={filters.item}
+                        onChange={handleFilterChange}
+                        className="item-filter-input"
+                      />
+                    </th>
 
-    <th>
-      <input
-        type="text"
-        name="status"
-        placeholder="Filter status..."
-        value={filters.status}
-        onChange={handleFilterChange}
-        className="item-filter-input"
-      />
-    </th>
+                    <th>
+                      <input
+                        type="text"
+                        name="status"
+                        placeholder="Filter status..."
+                        value={filters.status}
+                        onChange={handleFilterChange}
+                        className="item-filter-input"
+                      />
+                    </th>
 
-    <th></th>
-  </tr>
-</thead>
+                    <th></th>
+                  </tr>
+                </thead>
 
+                <tbody>
+                  {filteredItems.map((item) => {
 
-              <tbody>
-                {filteredItems.map((item) => {
+                    const cat = categories.find(
+                      (c) => c.category_id === item.category_id
+                    );
 
-                  const cat = categories.find(
-                    (c) => c.category_id === item.category_id
-                  );
+                    return (
+                      <tr key={item.id}>
+                        {editingId === item.id ? (
+                          <>
+                            <td>{cat?.category_name}</td>
+                            <td>{editingData.ITEM_NAME}</td>
 
-                  return (
-                    <tr key={item.id}>
-                      {editingId === item.id ? (
-                        <>
-       <td>{cat?.category_name}</td>
+                            <td>
+                              <select
+                                name="STATUS"
+                                value={editingData.STATUS}
+                                onChange={handleEditChange}
+                              >
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                              </select>
+                            </td>
 
-                          <td>
-                            <input
-                              type="text"
-                              name="ITEM_NAME"
-                              value={editingData.ITEM_NAME}
-                              onChange={handleEditChange}
-                            />
-                          </td>
+                            <td>
+                              <button className="item-btn-save" onClick={() => handleUpdate(item.id)}>Save</button>
+                              <button className="item-btn-cancel" onClick={handleCancel}>Cancel</button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td>{cat?.category_name}</td>
+                            <td>{item.item_name}</td>
+                            <td>{item.status}</td>
 
-                          <td>
-                            <select
-                              name="STATUS"
-                              value={editingData.STATUS}
-                              onChange={handleEditChange}
-                            >
-                              <option value="Active">Active</option>
-                              <option value="Inactive">Inactive</option>
-                            </select>
-                          </td>
+                            <td>
+                              <button className="item-btn-edit" onClick={() => handleEdit(item)}>Edit</button>
 
-                          <td>
-                            <button className="item-btn-save" onClick={() => handleUpdate(item.id)}>Save</button>
-                            <button className="item-btn-cancel" onClick={handleCancel}>Cancel</button>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td>{cat?.category_name}</td>
-                          <td>{item.item_name}</td>
-                          <td>{item.status}</td>
+                              {/* ✅ DELETE DISABLED */}
+                              <button
+                                className="item-btn-delete"
+                                disabled={usageMap[`${item.category_id}_${item.item_id}`] === true}
+                                onClick={() => handleDelete(item)}
+                              >
+                                Delete
+                              </button>
 
-                          <td>
-                            <button className="item-btn-edit" onClick={() => handleEdit(item)}>Edit</button>
-                            <button className="item-btn-delete" onClick={() => handleDelete(item.id)}>Delete</button>
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
 
-            </table>
+              </table>
             </div>
           </div>
 

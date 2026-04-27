@@ -128,18 +128,19 @@ const WorkOrderDetails = () => {
           </div>
           <div className="wo-value-row">
             <select
-              name="CONTRACTOR_NAME"
-              value={details.CONTRACTOR_NAME || ""}
-              onChange={handleChange}
-              size={2}                // 👈 show ONLY 2 names
-              style={{ width: "100%" }} // optional, keeps UI clean
-            >
-              {contractors.map((c) => (
-                <option key={c.provider_id} value={c.full_name}>
-                  {c.full_name} ({c.service_locations})
-                </option>
-              ))}
-            </select>
+  name="CONTRACTOR_NAME"
+  value={details.CONTRACTOR_NAME || ""}
+  onChange={handleChange}
+  style={{ width: "100%" }}
+>
+  <option value="">-- Select Contractor --</option>
+
+  {contractors.map((c) => (
+    <option key={c.provider_id} value={c.full_name}>
+      {c.full_name} ({c.service_locations})
+    </option>
+  ))}
+</select>
           </div>
 
         </div>

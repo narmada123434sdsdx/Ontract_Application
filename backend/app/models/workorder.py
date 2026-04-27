@@ -87,6 +87,7 @@ class WorkOrder(db.Model):
 
     requested_time_close = db.Column(db.String(100))
     remarks = db.Column(db.String(4000))
+    detailed_description = db.Column(db.Text)
 
     creation_time_image = db.Column(JSONB)
     closing_images = db.Column(JSONB)
@@ -103,10 +104,10 @@ class WorkOrder(db.Model):
 
             sql = text("""
                 INSERT INTO workorder_t (workorder,created_t,status,category,item,type,description,region,
-                state,city,client,address,ticket_assignment_type,requested_time_close,remarks,
+                state,city,client,address,ticket_assignment_type,requested_time_close,remarks,detailed_description,
                 creation_time_image,closing_images,created_by)
                 VALUES (:workorder,:created_t,:status,:category,:item,:type,:description,:region,:state,:city,:client,
-                :address,:ticket_assignment_type,:requested_time_close,:remarks,:creation_time_image,:closing_images,
+                :address,:ticket_assignment_type,:requested_time_close,:remarks,:detailed_description,:creation_time_image,:closing_images,
                 :created_by)
                 RETURNING *;
             """)
@@ -127,6 +128,7 @@ class WorkOrder(db.Model):
                 "ticket_assignment_type": data.get("ticket_assignment_type", "auto"),
                 "requested_time_close": data.get("REQUESTED_TIME_CLOSING"),
                 "remarks": data.get("REMARKS"),
+                "detailed_description": data.get("DETAILED_DESCRIPTION", ""),
                 "creation_time_image": json.dumps(data.get("creation_time_image", [])),
                 "closing_images": json.dumps([]),
                 "created_by": data.get("created_by")
@@ -721,6 +723,7 @@ class WorkOrder(db.Model):
             "ticket_assignment_type": self.ticket_assignment_type,
             "requested_time_close": self.requested_time_close,
             "remarks": self.remarks,
+            "detailed_description": self.detailed_description,
             "creation_time_image": self.creation_time_image if self.creation_time_image else [],
             "closing_images": self.closing_images if self.closing_images else [],
             "created_by": self.created_by
@@ -1010,7 +1013,7 @@ class WorkOrder(db.Model):
     def get_assigned_workorder_details(workorder_id):
         try:
             sql = text("""
-                SELECT a.workorder,a.creation_time_image,b.region_name,c.category_name,a.remarks,a.requested_time_close,
+                SELECT a.workorder,a.creation_time_image,b.region_name,c.category_name,a.remarks,a.detailed_description,a.requested_time_close,
                 d.item_name,e.type_name,f.description_name,g.state_name,h.city_name,a.client
                 FROM workorder_t a JOIN region_master_t b ON a.region = b.region_id
                 JOIN category_master_t c ON a.category = c.category_id
@@ -1054,7 +1057,7 @@ class WorkOrder(db.Model):
         try:
             sql = text("""
                 SELECT a.workorder,d.assignment_status,d.assigned_at,a.requested_time_close,b.region_name,
-                c.category_name,a.remarks,a.client,e.item_name,f.type_name,g.description_name,h.state_name,
+                c.category_name,a.remarks,a.detailed_description,a.client,e.item_name,f.type_name,g.description_name,h.state_name,
                 i.city_name FROM workorder_t a JOIN region_master_t b ON a.region = b.region_id
                 JOIN category_master_t c ON a.category = c.category_id
                 JOIN workorder_assignment_t d ON d."WORKORDER_ID" = a.workorder
@@ -1622,6 +1625,7 @@ class WorkOrder(db.Model):
         try:
             sql = text("""
                 SELECT a.*,b.*,c.region_name,d.category_name,e.item_name,f.type_name,g.description_name,
+                b.detailed_description,
                 h.state_name,i.city_name FROM workorder_life_cycle_t a
                 JOIN workorder_t b ON a.workorder = b.workorder
                 JOIN region_master_t c ON c.region_id = b.region
@@ -1971,3 +1975,91 @@ class WorkOrder(db.Model):
                 exc_info=True
             )
             raise
+
+
+    @staticmethod
+    def get_category_usage(category_id):
+        try:
+            sql = text("""
+                SELECT COUNT(1) AS count FROM WORKORDER_T WHERE CATEGORY = :category_id
+            """)
+
+            result = db.session.execute(
+                sql, {"category_id": category_id}
+            ).mappings().first()
+
+            return result["count"] > 0
+
+        except Exception as e:
+            logging.error("get_category_usage error", exc_info=True)
+            return False
+        
+    @staticmethod
+    def get_item_usage(category_id, item_id):
+        try:
+            sql = text("""
+                SELECT COUNT(1) AS count FROM WORKORDER_T WHERE CATEGORY = :category_id 
+                AND item = :item_id
+            """)
+
+            result = db.session.execute(
+                sql,
+                {
+                    "category_id": category_id,
+                    "item_id": item_id
+                }
+            ).mappings().first()
+
+            return result["count"] > 0
+
+        except Exception as e:
+            logging.error("get_item_usage error", exc_info=True)
+            return False
+
+    @staticmethod
+    def get_type_usage(category_id, item_id, type_id):
+        try:
+            sql = text("""
+                SELECT COUNT(1) AS count FROM WORKORDER_T WHERE CATEGORY = :category_id 
+                AND item = :item_id AND type = :type_id
+            """)
+
+            result = db.session.execute(
+                sql,
+                {
+                    "category_id": category_id,
+                    "item_id": item_id,
+                    "type_id": type_id
+                }
+            ).mappings().first()
+
+            return result["count"] > 0
+
+        except Exception as e:
+            logging.error("get_type_usage error", exc_info=True)
+            return False
+
+    
+    @staticmethod
+    def get_description_usage(category_id, item_id, type_id, description_id):
+        try:
+            sql = text("""
+                SELECT COUNT(1) AS count FROM WORKORDER_T WHERE CATEGORY = :category_id 
+                AND item = :item_id AND type = :type_id AND description = :description_id
+            """)
+
+            result = db.session.execute(
+                sql,
+                {
+                    "category_id": category_id,
+                    "item_id": item_id,
+                    "type_id": type_id,
+                    "description_id": description_id
+                }
+            ).mappings().first()
+
+            return result["count"] > 0
+
+        except Exception as e:
+            logging.error("get_description_usage error", exc_info=True)
+            return False

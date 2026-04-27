@@ -128,7 +128,24 @@ class ProviderController:
             "success": True,
             "user": user
         }, 200
+    @staticmethod
+    def save_token(user_id, fcm_token, device_type):
+        logging.info(f"check savetoken input: {user_id}")
+       
+        try:
+            success, error = ProviderModel.save_token(user_id,fcm_token,device_type)
 
+            if not success:
+                return {"success": False,"error": error}, 500
+
+            return {
+                "success": True,
+                "message": "Token saved successfully"
+            }, 200
+
+        except Exception as e:
+            return {"success": False,"error": str(e)}, 500
+    
     
 
     @staticmethod

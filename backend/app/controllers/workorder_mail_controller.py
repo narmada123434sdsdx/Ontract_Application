@@ -60,6 +60,37 @@ def handle_send_acceptance_mail(workorder_code, request_data, base_url):
             provider_id=request_data["CONTRACTOR_ID"],
             expiry_times=expiry_minutes
         )
+
+        # =====================================================
+        # 🔥 🔔 PUSH NOTIFICATION START
+        # =====================================================
+        logging.info("🔥 ENTERING NOTIFICATION BLOCK")
+        print("🔥 STEP 2: BEFORE EMAIL")
+        try:
+            print("🔥 TEST NOTIFICATION BLOCK")
+            from app.utils.notification_service import send_notification_to_tokens
+            from app.models.provider_model import ProviderModel
+            logging.info(f"🔍 Fetching tokens for contractor: {request_data['CONTRACTOR_ID']}")
+            tokens, error = ProviderModel.get_active_token_user_id(
+                request_data["CONTRACTOR_ID"]
+            )
+            print("🔥 TOKENS:", tokens)
+            if tokens:
+                send_notification_to_tokens(
+                    tokens,
+                    "New Workorder Assigned",
+                    f"You have a new workorder: {request_data['workorder']}"
+                )
+                logging.info("✅ Push notification sent")
+            else:
+                logging.warning("⚠️ No tokens found for contractor")
+
+        except Exception as notify_error:
+            logging.error(f"❌ Push notification failed: {notify_error}", exc_info=True)
+
+        # =====================================================
+        # 🔥 PUSH NOTIFICATION END
+        # =====================================================
                                                                                                               
         insert_email_notification_log(request_data["workorder"], contractor_name, contractor_email, status)
         return {"message": "Email Sent", "status": status}, 200

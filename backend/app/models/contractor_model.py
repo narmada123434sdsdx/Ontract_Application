@@ -70,12 +70,18 @@ class ContractorModel:
     # ---------------- LOGIN ----------------
     @staticmethod
     def get_contractor_by_email(email):
+        print(f"🗃️ Fetching contractor for email: {email}")
+    
         sql = text("""
-            SELECT password_hash, active_status, service_type 
-            FROM users_t 
+            SELECT password_hash, active_status, service_type
+            FROM users_t
             WHERE email_id = :email
         """)
+    
         row = db.session.execute(sql, {"email": email}).fetchone()
+    
+        print(f"🧾 Raw DB Row: {row}")
+    
         return dict(row._mapping) if row else None
 
     # ---------------- OTP ----------------
@@ -96,7 +102,10 @@ class ContractorModel:
         """)
         row = db.session.execute(sql, {"email": email}).fetchone()
         return dict(row._mapping) if row else None
-
+    
+     
+    
+    
     @staticmethod
     def delete_otp(email):
         db.session.execute(text("DELETE FROM otp_codes_t WHERE email_id = :email"), {"email": email})
@@ -508,3 +517,190 @@ class ContractorModel:
         result = db.session.execute(sql, {"id": message_id})
         db.session.commit()
         return result.rowcount > 0
+    
+    @staticmethod
+    def get_active_session(refresh_token):
+        sql = text("""
+            SELECT
+                id,
+                contractor_id,
+                refresh_token,
+                expires_at,
+                is_active,
+                token_family,
+                ip_address
+            FROM contractor_sessions
+            WHERE refresh_token = :token
+              AND is_active = TRUE
+              AND expires_at > NOW()
+            LIMIT 1
+        """)
+    
+        row = db.session.execute(sql, {"token": refresh_token}).fetchone()
+        return dict(row._mapping) if row else None
+    
+    @staticmethod
+    def get_contractor_by_id(contractor_id):
+        sql = text("""
+            SELECT
+                c.company_id,
+                u.user_uid,
+                u.email_id,
+                u.contact_number,
+                u.status,
+                c.company_name,
+                c.brn_number
+            FROM users_t u
+            JOIN company_details_t c
+                ON u.user_uid = c.user_uid
+            WHERE u.user_uid = :uid
+            LIMIT 1
+        """)
+    
+        row = db.session.execute(sql, {"uid": contractor_id}).fetchone()
+        return dict(row._mapping) if row else None
+    
+    
+    @staticmethod
+    def rotate_session_token(old_token, new_token, expires_at):
+        sql = text("""
+            UPDATE contractor_sessions
+            SET refresh_token = :new_token,
+                expires_at = :expires_at,
+                last_used_at = NOW()
+            WHERE refresh_token = :old_token
+        """)
+    
+        db.session.execute(sql, {
+            "new_token": new_token,
+            "expires_at": expires_at,
+            "old_token": old_token
+        })
+        db.session.commit()
+        
+        
+    
+    @staticmethod
+    def deactivate_session(refresh_token, auto_commit=True):
+        print("\n🧠 MODEL → deactivate_session START")
+    
+        sql = text("""
+            UPDATE contractor_sessions
+            SET is_active = FALSE,
+                last_used_at = NOW(),
+                revoked_reason = 'rotated'
+            WHERE refresh_token = :token
+        """)
+    
+        result = db.session.execute(sql, {"token": refresh_token})
+    
+        print(f"📊 Rows Updated      : {result.rowcount}")
+    
+        if auto_commit:
+            db.session.commit()
+            print("💾 Commit success")
+    
+        print("🧠 MODEL → deactivate_session END")
+        return result.rowcount > 0
+    
+    
+    @staticmethod
+    def rotate_refresh_session(
+        contractor_id,
+        old_token,
+        new_token,
+        expires_at,
+        ip_address,
+        token_family
+    ):
+        print("\n🚀 MODEL → rotate_refresh_session START")
+    
+        try:
+            # STEP 1 → insert new token row
+            ContractorModel.create_session(
+                contractor_id,
+                new_token,
+                "WEB",
+                expires_at,
+                ip_address,
+                token_family=token_family,
+                rotated_from=old_token,
+                auto_commit=False
+            )
+            print("✅ STEP 1 → new session inserted")
+    
+            # STEP 2 → deactivate old token row
+            ContractorModel.deactivate_session(old_token, auto_commit=False)
+            print("✅ STEP 2 → old session deactivated")
+    
+            db.session.commit()
+            print("💾 TRANSACTION COMMIT SUCCESS")
+            print("🚀 MODEL → rotate_refresh_session END")
+    
+            return True
+    
+        except Exception as e:
+            db.session.rollback()
+            print(f"🔥 ROTATION FAILED: {str(e)}")
+            print("↩️ ROLLBACK COMPLETE")
+            return False
+        
+        
+    @staticmethod
+    def create_session(
+        contractor_id,
+        refresh_token,
+        device_name,
+        expires_at,
+        ip_address=None,
+        token_family=None,
+        rotated_from=None,
+        auto_commit=True
+    ):
+
+    
+        try:
+            sql = text("""
+                INSERT INTO contractor_sessions
+                (
+                    contractor_id,
+                    refresh_token,
+                    device_name,
+                    expires_at,
+                    ip_address,
+                    token_family,
+                    rotated_from
+                )
+                VALUES (
+                    :contractor_id,
+                    :refresh_token,
+                    :device_name,
+                    :expires_at,
+                    :ip_address,
+                    :token_family,
+                    :rotated_from
+                )
+            """)
+    
+            result = db.session.execute(sql, {
+                "contractor_id": contractor_id,
+                "refresh_token": refresh_token,
+                "device_name": device_name,
+                "expires_at": expires_at,
+                "ip_address": ip_address,
+                "token_family": token_family,
+                "rotated_from": rotated_from
+            })
+    
+        
+    
+            if auto_commit:
+                db.session.commit()
+            
+    
+            return result.rowcount > 0
+    
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ SESSION INSERT ERROR: {str(e)}")
+            raise

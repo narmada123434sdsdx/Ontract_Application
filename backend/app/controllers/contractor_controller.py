@@ -6,6 +6,11 @@ import random
 import string
 import base64
 import logging
+import jwt
+import uuid
+from flask import current_app
+from flask import request, jsonify, make_response
+from datetime import datetime, timedelta
 from app.utils.file_utils import save_uploaded_file
 from app.models.contractor_model import ContractorModel
 from app.models.provider_model import ProviderModel 
@@ -62,52 +67,229 @@ class ContractorController:
 
     # ---------------- Login ----------------
     @staticmethod
-    def login(email,password):
-
-        # This now reads from users_t (service_type = 1 in model)
+    def login(email, password):
+        print("\n" + "=" * 60)
+        print("🔐 CONTRACTOR LOGIN DEBUG START")
+        print(f"📩 Input Email      : {email}")
+        print(f"🔑 Input Password   : {password}")
+    
         contractor = ContractorModel.get_contractor_by_email(email)
+    
+        print(f"🗄️ DB Contractor Row : {contractor}")
+    
         if not contractor:
+            print("❌ Contractor not found")
+            print("=" * 60)
             return {"error": "Invalid credentials"}, 401
-
-        # Optional extra safety: ensure this really is a company account
+    
+        print(f"🧩 service_type      : {contractor.get('service_type')}")
+        print(f"✅ active_status     : {contractor.get('active_status')}")
+        print(f"🔒 password_hash     : {contractor.get('password_hash')}")
+    
+        # service type validation
         if contractor.get("service_type") is not None and contractor["service_type"] != 1:
+            print("❌ service_type mismatch")
+            print("=" * 60)
             return {"error": "Invalid credentials"}, 401
-
-        if not bcrypt.checkpw(password.encode(), contractor["password_hash"].encode()):
+    
+        # password check
+        password_match = bcrypt.checkpw(
+            password.encode(),
+            contractor["password_hash"].encode()
+        )
+    
+        print(f"🔍 Password Match    : {password_match}")
+    
+        if not password_match:
+            print("❌ Password mismatch")
+            print("=" * 60)
             return {"error": "Invalid credentials"}, 401
-
+    
         if not contractor["active_status"]:
+            print("❌ Account not activated")
+            print("=" * 60)
             return {"error": "Account not activated"}, 401
-
+    
         otp = ''.join(random.choices(string.digits, k=6))
+        print(f"📨 Generated OTP     : {otp}")
+    
         ContractorModel.save_otp(email, otp)
         send_contractor_otp_email(email, otp)
-
+    
+        print("✅ OTP sent successfully")
+        print("=" * 60)
+    
         return {"message": "OTP sent to contractor email"}, 200
 
-    # ---------------- Verify OTP ----------------
+# ---------------- Verify OTP ----------------
     @staticmethod
     def verify_otp(data):
-        email = data.get('email')
-        otp = data.get('otp')
+       
+    
+        email = data.get("email")
+        otp = data.get("otp")
+    
+   
+    
         if not email or not otp:
+         
             return {"error": "Email and OTP required"}, 400
-
+    
         record = ContractorModel.validate_otp(email)
-        if record and record['otp_code'] == otp:
+        print(f"🧾 OTP DB Record     : {record}")
+    
+        if record and record["otp_code"] == otp:
+            
+    
             ContractorModel.delete_otp(email)
-
+            
+    
             contractor = ContractorModel.get_basic_info(email)
+         
+    
             if not contractor:
+       
                 return {"error": "Contractor not found"}, 404
+            
+            family_id = str(uuid.uuid4())
+            print(f"🧬 Token Family ID  : {family_id}")
+    
+            refresh_token = jwt.encode(
+                {
+                    "contractor_id": contractor["user_uid"],
+                    "exp": datetime.utcnow() + timedelta(days=90),
+                },
+                current_app.config["SECRET_KEY"],
+                algorithm="HS256",
+            )
+    
+        
+            
+            ip_address = request.headers.get(
+                "X-Forwarded-For",
+                request.remote_addr
+            )
+    
+            ContractorModel.create_session(
+                contractor["user_uid"],
+                refresh_token,
+                "WEB",
+                datetime.utcnow() + timedelta(days=90),
+                ip_address,
+                token_family=family_id,
+                rotated_from=None
+            )
+            
 
+            
             return {
                 "message": "OTP verified successfully",
-                "contractor": contractor
+                "contractor": contractor,
+                "refresh_token": refresh_token,
             }, 200
+            
+         
+            return {"error": "Invalid or expired OTP"}, 400
 
-        return {"error": "Invalid or expired OTP"}, 401
-
+    @staticmethod
+    def refresh_token(refresh_token):
+    
+    
+        if not refresh_token:
+         
+            return {"error": "Refresh token missing"}, 401
+    
+        try:
+            print(f"🔐 Incoming Token    : {refresh_token[:60]}...")
+    
+            payload = jwt.decode(
+                refresh_token,
+                current_app.config["SECRET_KEY"],
+                algorithms=["HS256"],
+            )
+    
+            contractor_id = payload.get("contractor_id")
+            print(f"👤 Contractor ID     : {contractor_id}")
+    
+            if not contractor_id:
+               
+                return {"error": "Invalid token payload"}, 401
+    
+            # ✅ fetch exact active session
+            session = ContractorModel.get_active_session(refresh_token)
+            print(f"🗄️ Active Session    : {session}")
+    
+            if not session:
+                print("🚨 Session missing / reused / logged out")
+                print("=" * 70)
+                return {"error": "Session expired or logged out"}, 401
+    
+            contractor = ContractorModel.get_contractor_by_id(contractor_id)
+            print(f"👤 Contractor Data   : {contractor}")
+    
+            if not contractor:
+               
+                return {"error": "Contractor not found"}, 404
+    
+            # ✅ generate new rotated token
+            new_refresh_token = jwt.encode(
+                {
+                    "contractor_id": contractor["user_uid"],
+                    "exp": datetime.utcnow() + timedelta(days=90),
+                },
+                current_app.config["SECRET_KEY"],
+                algorithm="HS256",
+            )
+    
+            print(f"🆕 New Token         : {new_refresh_token[:60]}...")
+            print("🚀 Starting safe session rotation")
+            
+            rotation_success = ContractorModel.rotate_refresh_session(
+                contractor["user_uid"],
+                refresh_token,
+                new_refresh_token,
+                datetime.utcnow() + timedelta(days=90),
+                session.get("ip_address"),
+                session.get("token_family")
+            )
+            
+            if not rotation_success:
+          
+                return {"error": "Session rotation failed"}, 500
+            
+            print(f"🧬 Family continued  : {session.get('token_family')}")
+          
+    
+            return {
+                "message": "Session restored successfully",
+                "contractor": contractor,
+                "refresh_token": new_refresh_token,
+            }, 200
+    
+        except jwt.ExpiredSignatureError:
+           
+            return {"error": "Refresh token expired"}, 401
+    
+        except jwt.InvalidTokenError as e:
+          
+            return {"error": "Invalid refresh token"}, 401
+    
+        except Exception as e:
+          
+            return {"error": "Failed to restore session"}, 500
+      
+    
+    @staticmethod
+    def logout(refresh_token):
+        if not refresh_token:
+            return {"error": "Refresh token missing"}, 400
+    
+        # ✅ deactivate DB session
+        ContractorModel.deactivate_session(refresh_token)
+    
+        return {"message": "Logged out successfully"}, 200
+    
+    
     # ---------------- Resend OTP ----------------
     @staticmethod
     def resend_otp(data):

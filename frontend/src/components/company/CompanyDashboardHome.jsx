@@ -145,7 +145,7 @@ const { contractor, loading } = useContractor();
 
         <Link to="/contractor/dashboard/workorders" className="workorder-pill">
           <FaClipboardList className="me-2" />
-          Work Orders2
+          WorkOrders
         </Link>
       </div>
 

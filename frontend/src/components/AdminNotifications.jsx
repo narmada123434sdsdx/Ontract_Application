@@ -381,8 +381,12 @@ function AdminNotifications() {
                     ["Work Item", details[0].item_name],
                     ["Work Type", details[0].type_name],
                     ["Description", details[0].description_name],
+                    ...(details[0].detailed_description
+    ? [["Detailed Description", details[0].detailed_description]]
+    : []),
                     ["Remarks", details[0].remarks],
                     ["Completed At", details[0].workorder_completed_time],
+
                   ].map(([k, v], i) => (
                     <div className="kv-row" key={i}>
                       <span className="kv-label">{k}</span>

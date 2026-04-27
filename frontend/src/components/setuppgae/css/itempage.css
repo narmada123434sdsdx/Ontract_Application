@@ -223,3 +223,16 @@
   border-color: #007bff;
 }
 
+.item-btn-delete {
+    background: #dc2626;
+    color: white;
+    cursor: pointer;
+}
+
+/* ✅ Disabled but keep SAME color */
+.item-btn-delete:disabled {
+    background: #dc2626;   /* keep same red */
+    color: white;          /* keep text same */
+    opacity: 0.7;          /* slight fade (optional) */
+    cursor: not-allowed !important;  /* 🔥 important */
+}

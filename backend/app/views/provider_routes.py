@@ -51,6 +51,18 @@ def verify_otp():
     result, status = ProviderController.verify_otp(email, otp)
     return jsonify(result), status
 
+@provider_bp.route("/save_token", methods=["POST"])
+def save_token():
+    data = request.get_json()
+
+    user_id = data.get("user_id")
+    fcm_token = data.get("fcm_token")
+    device_type = data.get("device_type", "web")
+
+    result, status = ProviderController.save_token(user_id,fcm_token,device_type)
+
+    return jsonify(result), status
+
 
 @provider_bp.route("/resend_otp", methods=["POST"])
 def resend_otp():

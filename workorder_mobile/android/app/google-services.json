@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "869129101946",
+    "project_id": "ontract-notifications",
+    "storage_bucket": "ontract-notifications.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:869129101946:android:b996c64e544e320e0511c3",
+        "android_client_info": {
+          "package_name": "com.example.workorder_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuVSvDVZIU-u2zHXEVOcvPaj8ULGMa2OE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
