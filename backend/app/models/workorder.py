@@ -1,5 +1,6 @@
 # app/models/workorder.py
 from .database import db
+from flask_bcrypt import Bcrypt
 from sqlalchemy import text, func, LargeBinary
 from datetime import datetime, timedelta,timezone
 from sqlalchemy.dialects.postgresql import JSON
@@ -8,6 +9,7 @@ import base64
 import logging
 import os
 import threading
+bcrypt = Bcrypt()
 from time import time
 from urllib.parse import quote
 from sqlalchemy.dialects.postgresql import JSON, JSONB
@@ -15,6 +17,7 @@ from flask import current_app
 import pytz
 from app.utils.workorder_certificate import generate_workorder_completion_certificate
 from app.utils.email_utils import send_workorder_closure_email
+
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -2063,3 +2066,102 @@ class WorkOrder(db.Model):
         except Exception as e:
             logging.error("get_description_usage error", exc_info=True)
             return False
+    
+    
+    
+    @staticmethod
+    def create_admin(req_data):
+        try:
+            # Validate required fields
+            full_name = req_data.get("fullName")
+            email = req_data.get("email")
+            password = req_data.get("password")
+            mobile = req_data.get("mobile")
+            modules = req_data.get("modules", [])
+
+            if not full_name or not email or not password or not mobile:
+                return {
+                    "success": False,
+                    "message": "All required fields must be provided"
+                }
+
+            # Check if email already exists
+            check_sql = text("""
+                SELECT admin_id
+                FROM admins_t
+                WHERE LOWER(email) = LOWER(:email)
+            """)
+
+            existing_admin = db.session.execute(
+                check_sql,
+                {"email": email}
+            ).mappings().first()
+
+            if existing_admin:
+                return {
+                    "success": False,
+                    "message": "Email already exists"
+                }
+
+            # 🔥 USE BCRYPT INSTEAD OF generate_password_hash
+            hashed_password = bcrypt.generate_password_hash(
+                password
+            ).decode("utf-8")
+
+            # Prepare insert data
+            insert_data = {
+                "name": full_name,
+                "email": email,
+                "password_hash": hashed_password,
+                "mobile": mobile,
+                "modules": ",".join(modules) if isinstance(modules, list) else str(modules)
+            }
+
+            # Insert admin
+            insert_sql = text("""
+                INSERT INTO admins_t (
+                    name,
+                    email,
+                    password_hash,
+                    mobile,
+                    modules
+                )
+                VALUES (
+                    :name,
+                    :email,
+                    :password_hash,
+                    :mobile,
+                    :modules
+                )
+                RETURNING admin_id
+            """)
+
+            result = db.session.execute(
+                insert_sql,
+                insert_data
+            ).fetchone()
+
+            db.session.commit()
+
+            if not result:
+                return {
+                    "success": False,
+                    "message": "Admin creation failed"
+                }
+
+            return {
+                "success": True,
+                "admin_id": result[0],
+                "message": "Admin created successfully"
+            }
+
+        except Exception as e:
+            db.session.rollback()
+            logging.error("create_admin error", exc_info=True)
+
+            return {
+                "success": False,
+                "message": str(e)
+            }
+        
+    

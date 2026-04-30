@@ -14,6 +14,7 @@ import ContractorReport from './ContractorReport';
 import WorkorderReport from './WorkorderReport';
 import SummaryReport from './SummaryReport';
 import RateComparisonReport from './RateComparisonReport';
+import RegistrationPage from './AdminRegistration';
 
 function AdminApp({ admin, setAdmin }) {
 
@@ -74,6 +75,16 @@ function AdminApp({ admin, setAdmin }) {
               onClick={() => handleLinkClick('home')}
             >
               Home
+            </Link>
+          </li>
+
+           <li>
+            <Link
+              to="/admin/registration"
+              className={activeLink === 'home' ? 'active' : ''}
+              onClick={() => handleLinkClick('home')}
+            >
+              Registration
             </Link>
           </li>
 
@@ -204,6 +215,7 @@ function AdminApp({ admin, setAdmin }) {
 <Route path="/reports/workorder" element={<WorkorderReport />} />
 <Route path="/reports/summary" element={<SummaryReport />} />
 <Route path="/reports/rate-comparison" element={<RateComparisonReport />} />
+<Route path="/registration" element={<RegistrationPage />} />
         </Routes>
       </div>
     </div>

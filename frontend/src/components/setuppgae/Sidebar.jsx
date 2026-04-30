@@ -94,6 +94,9 @@ const Sidebar = () => {
               <NavLink to="/admin/setuppage/state" onClick={handleLinkClick}>
                 State
               </NavLink>
+              <NavLink to="/admin/setuppage/zones" onClick={handleLinkClick}>
+                Zones
+              </NavLink>
               <NavLink to="/admin/setuppage/city" onClick={handleLinkClick}>
                 City
               </NavLink>

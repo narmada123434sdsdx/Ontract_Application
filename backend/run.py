@@ -1,8 +1,8 @@
 from app import create_app
-from app.utils.firebase_init import initialize_firebase
+#from app.utils.firebase_init import initialize_firebase
 
 # 🔥 Initialize Firebase BEFORE app starts
-initialize_firebase()
+#initialize_firebase()
 
 app = create_app(include_admin=True)
 

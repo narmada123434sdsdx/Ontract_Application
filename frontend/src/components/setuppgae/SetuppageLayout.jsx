@@ -10,6 +10,8 @@ import ItemPage from "./itemPage";
 import TypePage from "./TypePage";
 import DescriptionPage from "./DescriptionPage";
 import WorkorderMaxAmountPage from "./WorkorderMaxAmountPage";
+import CreateZone from "./CreateZone";
+import EditZone from "./EditZone";
 
 function SetuppageLayout() {
   return (
@@ -27,11 +29,13 @@ function SetuppageLayout() {
           <Route path="/region" element={<CreateRegion />} />
           <Route path="/state" element={<CreateState />} />
           <Route path="/city" element={<CreateCity />} />
+          <Route path="/zones" element={<CreateZone />} />
           <Route path="/category" element={<CategoryPage />} />
           <Route path="/item" element={<ItemPage />} />
           <Route path="/type" element={<TypePage />} />
           <Route path="/description" element={<DescriptionPage />} />
           <Route path="/max-amount" element={<WorkorderMaxAmountPage />} />
+          <Route  path="/edit-zone/:id"  element={<EditZone />}/>
         </Routes>
       </div>
     </div>

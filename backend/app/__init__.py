@@ -82,6 +82,7 @@ def create_app(include_admin=True):
     from app.controllers.workorder_max_amount_controller import workorder_max_amount_bp
     from app.controllers.invoice_controller import invoice_bp
     from app.controllers.workorder_report_controller import workorder_report_bp
+    from app.controllers.zone_controller import zone_bp
 
     # ---------------------------------------------------------
     # REGISTER ROUTES
@@ -109,6 +110,7 @@ def create_app(include_admin=True):
     app.register_blueprint(workorder_max_amount_bp, url_prefix="/api")
     app.register_blueprint(invoice_bp)
     app.register_blueprint(workorder_report_bp, url_prefix="/api")
+    app.register_blueprint(zone_bp, url_prefix="/api/zone")
 
     if include_admin:
         from app.views.admin_routes import admin_bp

@@ -1023,3 +1023,29 @@ def check_description_usage():
     except Exception as e:
         print("CONTROLLER ERROR:", str(e))
         return jsonify({"error": str(e)}), 500
+
+@workorder_bp.route("/admin/register", methods=["POST"])
+def register_admin():
+    try:
+        req_data = request.get_json()
+
+        if not req_data:
+            return jsonify({
+                "success": False,
+                "message": "Invalid JSON input"
+            }), 400
+
+        result = WorkOrder.create_admin(req_data)
+
+        if not result["success"]:
+            return jsonify(result), 400
+
+        return jsonify(result), 201
+
+    except Exception as e:
+        logging.error("register_admin controller error", exc_info=True)
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500

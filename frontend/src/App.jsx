@@ -44,6 +44,7 @@ import ContractorBankDetails from "./components/company/ContractorBankDetails";
 import CompanyInvoice from "./components/company/CompanyInvoice";
 import RateComparisonReport from "./components/RateComparisonReport";
 
+
 function Layout({
   user,
   setUser,
