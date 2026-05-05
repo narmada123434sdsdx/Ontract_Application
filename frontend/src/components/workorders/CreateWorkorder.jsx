@@ -37,6 +37,7 @@ const CreateWorkOrder = () => {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
 
+  const [clientWarningShown, setClientWarningShown] = useState(false);
   const [selectedRegionId, setSelectedRegionId] = useState("");
   const [selectedStateId, setSelectedStateId] = useState("");
   const [selectedCityId, setSelectedCityId] = useState("");
@@ -56,11 +57,7 @@ const CreateWorkOrder = () => {
         const regs = await apiGet("/api/region/");
         setRegions(Array.isArray(regs) ? regs : []);
 
-        const dataClients = await apiGet("/api/workorders/standard-rates");
-        const uniqueClients = Array.from(
-          new Set((dataClients || []).map((item) => item.client))
-        );
-        setClients(uniqueClients);
+        
       } catch (err) {
         console.error("Initial load error:", err);
         Swal.fire("Error", "Failed to load initial data", "error");
@@ -69,6 +66,71 @@ const CreateWorkOrder = () => {
 
     loadInitial();
   }, []);
+
+
+  const fetchClients = async (
+    categoryId,
+    itemId,
+    typeId,
+    descriptionId
+  ) => {
+    try {
+      if (!categoryId || !itemId || !typeId || !descriptionId) {
+        setClients([]);
+        return;
+      }
+
+      const url =
+        `/api/workorders/standard-rates?` +
+        `category_id=${categoryId}&` +
+        `item_id=${itemId}&` +
+        `type_id=${typeId}&` +
+        `description_id=${descriptionId}`;
+
+      const dataClients = await apiGet(url);
+
+      const validClients = (dataClients || [])
+        .map((item) => item.client)
+        .filter((c) => c && c.trim()); // remove null/empty
+
+      // 🚨 NO CLIENT CASE
+      if (validClients.length === 0) {
+        setClients([]);
+        setSelectedClient("");
+
+        Swal.fire({
+          icon: "warning",
+          title: "No Client Found",
+          text: "There is no client for this workscope",
+        });
+
+        return;
+      }
+
+      const uniqueClients = Array.from(new Set(validClients));
+      setClients(uniqueClients);
+
+    } catch (err) {
+      console.error("Client fetch error:", err);
+      setClients([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients(
+      selectedCategoryId,
+      selectedItemId,
+      selectedTypeId,
+      selectedDescriptionId
+    );
+  }, [
+    selectedCategoryId,
+    selectedItemId,
+    selectedTypeId,
+    selectedDescriptionId,
+  ]);
+
+
 
   // ===============================
   // CATEGORY → ITEM → TYPE → DESCRIPTION
@@ -109,6 +171,8 @@ const CreateWorkOrder = () => {
     setSelectedDescriptionId("");
     setTypes([]);
     setDescriptionsDrop([]);
+    setClients([]);
+    setSelectedClient("");
   }, [selectedCategoryId]);
 
   useEffect(() => {
@@ -119,6 +183,8 @@ const CreateWorkOrder = () => {
     setSelectedTypeId("");
     setSelectedDescriptionId("");
     setDescriptionsDrop([]);
+    setClients([]);
+    setSelectedClient("");
   }, [selectedItemId]);
 
   useEffect(() => {
@@ -131,6 +197,8 @@ const CreateWorkOrder = () => {
     else setDescriptionsDrop([]);
 
     setSelectedDescriptionId("");
+    setClients([]);
+    setSelectedClient("");
   }, [selectedTypeId]);
 
   // ===============================

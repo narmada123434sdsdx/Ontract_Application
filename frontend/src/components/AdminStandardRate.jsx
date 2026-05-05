@@ -1,17 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./css/AdminStandardRate.css";
 import { apiGet, apiPost, apiPut, apiDelete, BASE_URLS } from "../api";
-import { useAdmin } from "../context/AdminContext";
-import { Ban } from "lucide-react";
-
-
 
 export default function AdminStandardRates() {
-  const { admin: ctxAdmin } = useAdmin();
-const permissionLevel = ctxAdmin?.email?.permission_level;
-const hasPriceEditAccess = permissionLevel === 1;
-
-
   const [rates, setRates] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +32,6 @@ const hasPriceEditAccess = permissionLevel === 1;
   // validations
   const [errors, setErrors] = useState({});
   const fileInputRef = useRef(null);
-  const canEditOrDelete = permissionLevel === 1;
 
   // form fields
   const emptyForm = {
@@ -56,20 +46,6 @@ const hasPriceEditAccess = permissionLevel === 1;
     price_rm: "",
     client: "",
   };
-
-  const editableFieldsForPriceAccess = [
-  "brand",
-  "sub_type",
-  "unit",
-  "copper_pipe_price",
-  "price_rm",
-  "client",
-  "type",
-  "description",
-  "item",
-  "category",
-];
-
 
 
   const [form, setForm] = useState(emptyForm);
@@ -194,98 +170,54 @@ const hasPriceEditAccess = permissionLevel === 1;
     if (!form.description?.trim())
       newErrors.description = "Description is required";
 
+    if (!form.client?.trim())
+      newErrors.client = "Client is required";
+
+    if (!form.price_rm || isNaN(form.price_rm))
+      newErrors.price_rm = "Valid Price is required";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   // Open Edit Modal
-const openEditModal = (row) => {
-  if (!canEditOrDelete) return; // 🔒 hard stop
+  const openEditModal = (row) => {
+    setIsEditing(true);
+    setEditId(row.id);
+    setForm({ ...row });
+    setErrors({});
+    setShowModal(true);
+  };
 
-  setIsEditing(true);
-  setEditId(row.id);
-  setForm({ ...row });
-  setErrors({});
-  setShowModal(true);
-};
+  // Submit add/update
+  const handleSave = async () => {
+    if (!validateForm()) return;
 
-
- const handleSave = async () => {
-  if (!validateForm()) return;
-
-  let payload = { ...form };
-
-  if (hasPriceEditAccess) {
-    // keep only allowed editable fields
-    Object.keys(payload).forEach((key) => {
-      if (!editableFieldsForPriceAccess.includes(key)) {
-        delete payload[key];
+    try {
+      if (isEditing) {
+        await apiPut(`/api/admin/standard_rates/${editId}`, form);
+        alert("Updated successfully");
+      } else {
+        await apiPost(`/api/admin/standard_rates`, form);
+        alert("Added successfully");
       }
-    });
-  } else {
-    // permission 2 → no edit at all
-    return;
-  }
-
-  try {
-    if (isEditing) {
-      await apiPut(`/api/admin/standard_rates/${editId}`, payload);
-      alert("Updated successfully");
-    } else {
-      await apiPost(`/api/admin/standard_rates`, payload);
-      alert("Added successfully");
+      setShowModal(false);
+      fetchRates();
+    } catch (err) {
+      alert(err.message || "Operation failed");
     }
-    setShowModal(false);
-    fetchRates();
-  } catch (err) {
-    alert(err.message || "Operation failed");
-  }
-};
+  };
 
   // Delete
-const handleDelete = async (id) => {
-  if (!canEditOrDelete) return; // 🔒 hard stop
-
-  if (!window.confirm("Are you sure to delete this record?")) return;
-  try {
-    await apiDelete(`/api/admin/standard_rates/${id}`);
-    fetchRates();
-  } catch (err) {
-    alert(err.message || "Delete failed");
-  }
-};
-
-
-  const maskIfNoPermission = (value) => {
-  if (permissionLevel === 2) {
-    return "XXX";
-  }
-  return value;
-};
-
-const ActionButton = ({ children, disabled, onClick, className }) => {
-  return (
-    <div className="action-btn-wrapper">
-      <button
-        className={className}
-        onClick={onClick}
-        disabled={disabled}
-        style={{ cursor: disabled ? "not-allowed" : "pointer" }}
-      >
-        {children}
-      </button>
-
-      {disabled && (
-        <span className="no-access-icon" title="You don't have permission">
-          <Ban size={14} />
-        </span>
-      )}
-    </div>
-  );
-};
-
-
-
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure to delete this record?")) return;
+    try {
+      await apiDelete(`/api/admin/standard_rates/${id}`);
+      fetchRates();
+    } catch (err) {
+      alert(err.message || "Delete failed");
+    }
+  };
 
   return (
     <div className="container mt-4">
@@ -484,28 +416,22 @@ const ActionButton = ({ children, disabled, onClick, className }) => {
                       <td>{row.brand}</td>
                       <td>{row.description}</td>
                       <td>{row.unit}</td>
-<td>{maskIfNoPermission(row.copper_pipe_price)}</td>
-<td>{maskIfNoPermission(row.price_rm)}</td>
-
+                      <td>{row.copper_pipe_price}</td>
+                      <td>{row.price_rm}</td>
                       <td>{row.client}</td>
                       <td>
-<ActionButton
-  className="btn btn-sm btn-warning me-2"
-  onClick={() => openEditModal(row)}
-  disabled={!canEditOrDelete}
->
-  Edit
-</ActionButton>
-
-<ActionButton
-  className="btn btn-sm btn-danger"
-  onClick={() => handleDelete(row.id)}
-  disabled={!canEditOrDelete}
->
-  Delete
-</ActionButton>
-
-
+                        <button
+                          className="btn btn-sm btn-warning me-2"
+                          onClick={() => openEditModal(row)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => handleDelete(row.id)}
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -649,9 +575,6 @@ const ActionButton = ({ children, disabled, onClick, className }) => {
                     return null;
                   }
 
-                 
-
-
                   return (
                     <div className="mb-3" key={key}>
                       <label className="form-label fw-semibold">
@@ -662,19 +585,13 @@ const ActionButton = ({ children, disabled, onClick, className }) => {
                         }[key] || key.replace(/_/g, " ").toUpperCase()}
                       </label>
 
-<input
-  className={`form-control ${errors[key] ? "is-invalid" : ""}`}
-  value={form[key] || ""}
-  disabled={
-    !hasPriceEditAccess || 
-    !editableFieldsForPriceAccess.includes(key)
-  }
-  onChange={(e) =>
-    setForm({ ...form, [key]: e.target.value })
-  }
-/>
-
-
+                      <input
+                        className={`form-control ${errors[key] ? "is-invalid" : ""}`}
+                        value={form[key] || ""}
+                        onChange={(e) =>
+                          setForm({ ...form, [key]: e.target.value })
+                        }
+                      />
 
                       {errors[key] && (
                         <div className="invalid-feedback">{errors[key]}</div>

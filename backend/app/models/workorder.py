@@ -805,30 +805,31 @@ class WorkOrder(db.Model):
 
 
     @staticmethod
-    def get_standard_rates():
+    def get_standard_rates(category_id, item_id, type_id, description_id):
         try:
+            if not all([category_id, item_id, type_id, description_id]):
+                return []
+
             query = text("""
-                SELECT 
-                    id, category,item,type,
-                    description, client, price_rm, created_at
-                FROM standard_rates_t where client is not null
-                ORDER BY id ASC
+                SELECT sr.client FROM standard_rates_t sr
+                JOIN category_master_t c ON c.category_id = :category_id
+                JOIN item_master_t i ON i.item_id = :item_id
+                JOIN type_master_t t ON t.type_id = :type_id
+                JOIN description_master_t d ON d.description_id = :description_id
+                WHERE LOWER(TRIM(sr.category)) = LOWER(TRIM(c.category_name))
+                AND LOWER(TRIM(sr.item)) = LOWER(TRIM(i.item_name))
+                AND LOWER(TRIM(sr.type)) = LOWER(TRIM(t.type_name))
+                AND LOWER(TRIM(sr.description)) = LOWER(TRIM(d.description_name))
             """)
 
-            rows = db.session.execute(query).fetchall()
-            return [
-                {
-                    "id": r.id,
-                    "trade": r.category,
-                    "category_item": r.item,
-                    "equipment_type": r.type,
-                    "description": r.description,
-                    "client": r.client,
-                    "price": float(r.price_rm) if r.price_rm else None,
-                    "created_at": r.created_at
-                } 
-                for r in rows
-            ]
+            rows = db.session.execute(query, {
+                "category_id": category_id,
+                "item_id": item_id,
+                "type_id": type_id,
+                "description_id": description_id
+            }).fetchall()
+
+            return [{"client": r.client} for r in rows if r.client]
 
         except Exception as e:
             print("[ERROR] get_standard_rates:", e)

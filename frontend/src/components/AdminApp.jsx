@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import AdminDashboard from './AdminDashboard';
@@ -7,9 +8,9 @@ import AdminHome from './AdminHome';
 import { Menu, X } from 'lucide-react';
 import WorkOrderLayout from './workorders/WorkOrderLayout';
 import SetuppageLayout from './setuppgae/SetuppageLayout';
-import InvoiceCreate from "./InvoiceCreate";
-import AdminNotifications from "./AdminNotifications";
-import { useAdmin } from "../context/AdminContext";
+import InvoiceCreate from './InvoiceCreate';
+import AdminNotifications from './AdminNotifications';
+import { useAdmin } from '../context/AdminContext';
 import ContractorReport from './ContractorReport';
 import WorkorderReport from './WorkorderReport';
 import SummaryReport from './SummaryReport';
@@ -17,17 +18,20 @@ import RateComparisonReport from './RateComparisonReport';
 import RegistrationPage from './AdminRegistration';
 
 function AdminApp({ admin, setAdmin }) {
-
-  // ✅ RENAME context admin to avoid conflict
   const { admin: ctxAdmin, loading } = useAdmin();
-
-  const permissionLevel = ctxAdmin?.email?.permission_level;
-  console.log("login admin details", permissionLevel);
 
   const navigate = useNavigate();
   const [activeLink, setActiveLink] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
+
+  // ✅ Get assigned modules from logged-in admin
+  const modules = ctxAdmin?.email?.modules
+    ? ctxAdmin.email.modules.split(',').map((m) => m.trim())
+    : [];
+
+  // ✅ Helper function
+  const hasModule = (moduleName) => modules.includes(moduleName);
 
   useEffect(() => {
     const storedAdmin = localStorage.getItem('admin');
@@ -57,7 +61,7 @@ function AdminApp({ admin, setAdmin }) {
           <h3 className="nav-title">Admin Portal</h3>
         </div>
 
-        {/* Mobile toggle button */}
+        {/* Mobile toggle */}
         <button
           className="menu-toggle"
           onClick={() => setMenuOpen(!menuOpen)}
@@ -66,49 +70,61 @@ function AdminApp({ admin, setAdmin }) {
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* Navigation links */}
+        {/* Navigation */}
         <ul className={`nav-links ${menuOpen ? 'open' : ''}`}>
-          <li>
-            <Link
-              to="/admin/home"
-              className={activeLink === 'home' ? 'active' : ''}
-              onClick={() => handleLinkClick('home')}
-            >
-              Home
-            </Link>
-          </li>
+          {/* Home */}
+          {hasModule('Home') && (
+            <li>
+              <Link
+                to="/admin/home"
+                className={activeLink === 'home' ? 'active' : ''}
+                onClick={() => handleLinkClick('home')}
+              >
+                Home
+              </Link>
+            </li>
+          )}
 
-           <li>
-            <Link
-              to="/admin/registration"
-              className={activeLink === 'home' ? 'active' : ''}
-              onClick={() => handleLinkClick('home')}
-            >
-              Registration
-            </Link>
-          </li>
+          {/* Registration */}
+          {hasModule('Registration') && (
+            <li>
+              <Link
+                to="/admin/registration"
+                className={activeLink === 'registration' ? 'active' : ''}
+                onClick={() => handleLinkClick('registration')}
+              >
+                Registration
+              </Link>
+            </li>
+          )}
 
-          <li>
-            <Link
-              to="/admin/setuppage"
-              className={activeLink === 'setuppage' ? 'active' : ''}
-              onClick={() => handleLinkClick('setuppage')}
-            >
-              Set Up page
-            </Link>
-          </li>
+          {/* Setup Page */}
+          {hasModule('Set Up page') && (
+            <li>
+              <Link
+                to="/admin/setuppage"
+                className={activeLink === 'setuppage' ? 'active' : ''}
+                onClick={() => handleLinkClick('setuppage')}
+              >
+                Set Up page
+              </Link>
+            </li>
+          )}
 
-          <li>
-            <Link
-              to="/admin/workorder"
-              className={activeLink === 'workorders' ? 'active' : ''}
-              onClick={() => handleLinkClick('workorders')}
-            >
-              Work Orders
-            </Link>
-          </li>
+          {/* Work Orders */}
+          {hasModule('Work Orders') && (
+            <li>
+              <Link
+                to="/admin/workorder"
+                className={activeLink === 'workorders' ? 'active' : ''}
+                onClick={() => handleLinkClick('workorders')}
+              >
+                Work Orders
+              </Link>
+            </li>
+          )}
 
-          {/* 🔐 Permission-based menu */}
+          {/* Standard Rate */}
           
             <li>
               <Link
@@ -121,78 +137,83 @@ function AdminApp({ admin, setAdmin }) {
             </li>
           
 
-          <li>
-            <Link
-              to="/admin/admindashboard"
-              className={activeLink === 'management' ? 'active' : ''}
-              onClick={() => handleLinkClick('management')}
-            >
-              Management
-            </Link>
-          </li>
+          {/* Management */}
+          {hasModule('Management') && (
+            <li>
+              <Link
+                to="/admin/admindashboard"
+                className={activeLink === 'management' ? 'active' : ''}
+                onClick={() => handleLinkClick('management')}
+              >
+                Management
+              </Link>
+            </li>
+          )}
 
-          {/*<li>
-            <Link
-              to="/admin/invoice"
-              className={activeLink === 'invoice' ? 'active' : ''}
-              onClick={() => handleLinkClick('invoice')}
-            >
-              Invoice
-            </Link>
-          </li>*/}
+          {/* Notifications */}
+          {hasModule('Notifications') && (
+            <li>
+              <Link
+                to="/admin/adminnotifications"
+                className={activeLink === 'notification' ? 'active' : ''}
+                onClick={() => handleLinkClick('notification')}
+              >
+                Notifications
+              </Link>
+            </li>
+          )}
 
-          <li>
-            <Link
-              to="/admin/adminnotifications"
-              className={activeLink === 'notification' ? 'active' : ''}
-              onClick={() => handleLinkClick('notification')}
-            >
-              Notifications
-            </Link>
-          </li>
+          {/* Reports */}
+          {hasModule('Reports') && (
+            <li className="nav-item reports-menu">
+              <div
+                className="nav-link"
+                onClick={() => setReportsOpen(!reportsOpen)}
+              >
+                REPORTS
+              </div>
 
+              <ul className={`reports-dropdown ${reportsOpen ? 'open' : ''}`}>
+                <li>
+                  <Link
+                    to="/admin/reports/contractor"
+                    onClick={() => handleLinkClick('contractor_report')}
+                  >
+                    Contractor Report
+                  </Link>
+                </li>
 
-<li className="nav-item reports-menu">
-<div
-  className="nav-link"
-  onClick={() => setReportsOpen(!reportsOpen)}
->
-  REPORTS
-</div>
+                <li>
+                  <Link
+                    to="/admin/reports/workorder"
+                    onClick={() => handleLinkClick('workorder_report')}
+                  >
+                    Workorder Report
+                  </Link>
+                </li>
 
-  <ul className={`reports-dropdown ${reportsOpen ? 'open' : ''}`}>
-    <li>
-      <Link
-        to="/admin/reports/contractor"
-        onClick={() => handleLinkClick('contractor_report')}
-      >
-        Contractor Report
-      </Link>
-    </li>
+                <li>
+                  <Link
+                    to="/admin/reports/summary"
+                    onClick={() => handleLinkClick('summary_report')}
+                  >
+                    Summary Report
+                  </Link>
+                </li>
 
-    <li>
-      <Link
-        to="/admin/reports/workorder"
-        onClick={() => handleLinkClick('workorder_report')}
-      >
-        Workorder Report
-      </Link>
-    </li>
+                <li>
+                  <Link
+                    to="/admin/reports/rate-comparison"
+                    onClick={() => handleLinkClick('rate_comparison')}
+                  >
+                    Rate Comparison Report
+                  </Link>
+                </li>
+              </ul>
+            </li>
+          )}
 
-
-    <li>
-  <Link
-    to="/admin/reports/summary"
-    onClick={() => handleLinkClick('summary_report')}
-  >
-    Summary Report
-  </Link>
-</li>
-  </ul>
-</li>
-
-
-
+          {/* Logout */}
           <li>
             <button className="logout-btn" onClick={handleLogout}>
               Logout
@@ -201,7 +222,7 @@ function AdminApp({ admin, setAdmin }) {
         </ul>
       </nav>
 
-      {/* Content Area */}
+      {/* Page Content */}
       <div className="admin-content">
         <Routes>
           <Route path="/home" element={<AdminHome admin={admin} setAdmin={setAdmin} />} />
@@ -212,10 +233,10 @@ function AdminApp({ admin, setAdmin }) {
           <Route path="/invoice" element={<InvoiceCreate />} />
           <Route path="/adminnotifications" element={<AdminNotifications />} />
           <Route path="/reports/contractor" element={<ContractorReport />} />
-<Route path="/reports/workorder" element={<WorkorderReport />} />
-<Route path="/reports/summary" element={<SummaryReport />} />
-<Route path="/reports/rate-comparison" element={<RateComparisonReport />} />
-<Route path="/registration" element={<RegistrationPage />} />
+          <Route path="/reports/workorder" element={<WorkorderReport />} />
+          <Route path="/reports/summary" element={<SummaryReport />} />
+          <Route path="/reports/rate-comparison" element={<RateComparisonReport />} />
+          <Route path="/registration" element={<RegistrationPage />} />
         </Routes>
       </div>
     </div>
@@ -223,3 +244,4 @@ function AdminApp({ admin, setAdmin }) {
 }
 
 export default AdminApp;
+

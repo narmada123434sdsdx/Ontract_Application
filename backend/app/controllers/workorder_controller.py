@@ -363,8 +363,15 @@ def filter_workorders():
 @workorder_bp.route("/standard-rates", methods=["GET"])
 def get_standard_rates():
     try:
-        data = WorkOrder.get_standard_rates()
+        category = request.args.get("category_id")
+        item = request.args.get("item_id")
+        type = request.args.get("type_id")
+        description = request.args.get("description_id")
+
+        data = WorkOrder.get_standard_rates(category,item,type,description)
+
         return jsonify(data), 200
+
     except Exception as e:
         print("[ERROR] get_standard_rates:", e)
         return jsonify({"error": str(e)}), 500
