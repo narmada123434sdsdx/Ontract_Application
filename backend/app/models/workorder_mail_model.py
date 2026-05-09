@@ -454,17 +454,40 @@ def get_workorder_details(workorder):
         return None
     
     
-def insert_workorder_assignment(workorder,provider_id,expiry_times):
+def insert_workorder_assignment(workorder, provider_id, expiry_times):
     try:
-        assigned_at = now_ist()              # datetime
+        assigned_at = now_ist()
         logging.info(f"check_inputof_current_time: '{assigned_at}'")
+
         expiry_time = assigned_at + timedelta(minutes=expiry_times)
-        
+
+        # ---------------------------------------------------
+        # ✅ STEP 1: EXPIRE OLD PENDING ASSIGNMENTS
+        # ---------------------------------------------------
+        expire_sql = text("""
+            UPDATE workorder_assignment_t
+            SET assignment_status = 'EXPIRED'
+            WHERE "WORKORDER_ID" = :wid
+            AND assignment_status = 'PENDING'
+        """)
+
+        expired_result = db.session.execute(expire_sql, {
+            "wid": workorder
+        })
+
+        logging.info(
+            f"Previous pending assignments expired: {expired_result.rowcount}"
+        )
+
+        # ---------------------------------------------------
+        # ✅ STEP 2: INSERT NEW ASSIGNMENT
+        # ---------------------------------------------------
         assign_sql = text("""
             INSERT INTO workorder_assignment_t
             ("WORKORDER_ID", provider_id, assigned_at, assignment_status, expiry_time)
             VALUES (:wid, :pid, :assigned_at, 'PENDING', :expiry)
         """)
+
         db.session.execute(assign_sql, {
             "wid": workorder,
             "pid": provider_id,
@@ -472,30 +495,75 @@ def insert_workorder_assignment(workorder,provider_id,expiry_times):
             "expiry": expiry_time
         })
 
+        # ---------------------------------------------------
+        # ✅ STEP 3: COMMIT
+        # ---------------------------------------------------
         db.session.commit()
-        logging.info(f"Workorder assigned | " f"WO={workorder}, "
+
+        logging.info(
+            f"Workorder assigned successfully | "
+            f"WO={workorder}, "
             f"Provider={provider_id}, "
             f"Expiry={expiry_time}"
         )
+
     except Exception:
         db.session.rollback()
-        logging.error("Error inserting workorder assignment", exc_info=True)
+        logging.error(
+            "Error inserting workorder assignment",
+            exc_info=True
+        )
         raise
     
     
-def update_workorder_status_assignment(workorder,contractor_id, status):
-    logging.info(f"Updating -> workorder: {workorder}, status: {status},contractor_id: {contractor_id}")
+def update_workorder_status_assignment(workorder, contractor_id, status):
+    logging.info(
+        f"Updating -> workorder: {workorder}, "
+        f"status: {status}, "
+        f"contractor_id: {contractor_id}"
+    )
+
     try:
+        # ---------------------------------------------------
+        # ✅ ONLY UPDATE CURRENT PENDING ASSIGNMENT
+        # EXPIRED records should never be accepted
+        # ---------------------------------------------------
         sql = text("""
             UPDATE workorder_assignment_t
             SET assignment_status = :status
-            WHERE "WORKORDER_ID" = :wid and provider_id = :contractor_id
+            WHERE "WORKORDER_ID" = :wid
+            AND provider_id = :contractor_id
+            AND assignment_status = 'PENDING'
         """)
-        db.session.execute(sql, {"status": status, "wid": workorder, "contractor_id": contractor_id})
+
+        result = db.session.execute(sql, {
+            "status": status,
+            "wid": workorder,
+            "contractor_id": contractor_id
+        })
+
         db.session.commit()
+
+        # ---------------------------------------------------
+        # ✅ LOG RESULT
+        # ---------------------------------------------------
+        if result.rowcount == 0:
+            logging.warning(
+                f"No active pending assignment found for "
+                f"WO={workorder}, Contractor={contractor_id}"
+            )
+        else:
+            logging.info(
+                f"Workorder accepted successfully | "
+                f"WO={workorder}, Contractor={contractor_id}"
+            )
+
     except Exception as e:
         db.session.rollback()
-        logging.error(f"Failed DB update: {e}", exc_info=True)
+        logging.error(
+            f"Failed DB update: {e}",
+            exc_info=True
+        )
         
 
 def is_workorder_already_responded(workorder_id, contractor_id):

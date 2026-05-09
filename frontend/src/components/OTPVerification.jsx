@@ -53,22 +53,25 @@ function OTPVerification() {
         loginUser(userData);
 
         console.log("🔥 OTP SUCCESS TRIGGERED");
+        console.log("👤 USER ID:", userData.user_uid);
 
-        // 🔥 FLUTTER BRIDGE (CORRECT WAY)
-        window.addEventListener("flutterInAppWebViewPlatformReady", function () {
-          console.log("📱 Flutter detected");
+        // =========================
+        // 📱 MOBILE (FLUTTER)
+        // =========================
+        if (window.flutter_inappwebview) {
+          console.log("📱 Sending userId to Flutter");
 
           window.flutter_inappwebview.callHandler(
-            "saveToken",
-            userData.user_uid
+            "sendUserToFlutter",
+            userData.user_uid.toString(),
+            "INDIVIDUAL"
           );
-        });
+        } else {
+          console.log("🌐 Running in browser (no Flutter)");
 
-        // 🌐 WEB PUSH (ONLY IF NOT FLUTTER)
-        if (!window.flutter_inappwebview) {
-
-          console.log("🌐 Running in browser");
-
+          // =========================
+          // 🌐 WEB PUSH (BROWSER ONLY)
+          // =========================
           let fcmToken = null;
 
           try {
@@ -95,9 +98,10 @@ function OTPVerification() {
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                  user_id: userData.user_uid,
-                  fcm_token: fcmToken,
-                  device_type: "web",
+                  "user_id": userData.user_uid,
+                  "fcm_token": fcmToken,
+                  "device_type": "web",
+                  "role": "INDIVIDUAL",
                 }),
               });
 
@@ -108,6 +112,7 @@ function OTPVerification() {
           }
         }
 
+        // 🔥 Navigate AFTER sending to Flutter
         navigate("/provider_home", { replace: true });
 
       } else {

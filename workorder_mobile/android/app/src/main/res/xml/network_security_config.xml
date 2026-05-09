@@ -1,13 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+
+    <!-- ✅ Allow all HTTP traffic -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
-            <certificates src="system" />
-            <certificates src="user" />
+            <certificates src="system"/>
+            <certificates src="user"/>
         </trust-anchors>
     </base-config>
 
+    <!-- ✅ Allow your backend IP -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">frontend-beige-sigma-63.vercel.app</domain>
+        <domain includeSubdomains="true">192.168.68.120</domain>
     </domain-config>
+
+    <!-- ✅ Allow your frontend -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">frontend-rho-silk-30.vercel.app</domain>
+    </domain-config>
+
 </network-security-config>

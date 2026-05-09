@@ -1031,8 +1031,38 @@ def check_description_usage():
         print("CONTROLLER ERROR:", str(e))
         return jsonify({"error": str(e)}), 500
 
-@workorder_bp.route("/admin/register", methods=["POST"])
-def register_admin():
+
+# =========================================================
+# CONTROLLER
+# SEARCH USER BY EMAIL
+# =========================================================
+
+@workorder_bp.route("/admin/get-user/<email>", methods=["GET"])
+def get_admin_by_email(email):
+    try:
+        result = WorkOrder.get_admin_by_email(email)
+
+        if not result["success"]:
+            return jsonify(result), 404
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        logging.error("get_admin_by_email controller error", exc_info=True)
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+# =========================================================
+# CONTROLLER
+# UPDATE USER
+# =========================================================
+
+@workorder_bp.route("/admin/update-user", methods=["PUT"])
+def update_admin():
     try:
         req_data = request.get_json()
 
@@ -1042,15 +1072,15 @@ def register_admin():
                 "message": "Invalid JSON input"
             }), 400
 
-        result = WorkOrder.create_admin(req_data)
+        result = WorkOrder.update_admin(req_data)
 
         if not result["success"]:
             return jsonify(result), 400
 
-        return jsonify(result), 201
+        return jsonify(result), 200
 
     except Exception as e:
-        logging.error("register_admin controller error", exc_info=True)
+        logging.error("update_admin controller error", exc_info=True)
 
         return jsonify({
             "success": False,

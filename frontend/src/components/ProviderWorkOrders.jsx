@@ -417,6 +417,15 @@ useEffect(() => {
                       <span className="kv-value">{details.remarks}</span>
                     </div>
                   )}
+
+                  {details.detailed_description && (
+  <div className="kv-row">
+    <span className="kv-label">Detailed Description</span>
+    <span className="kv-value">
+      {details.detailed_description}
+    </span>
+  </div>
+)}
                   {activeTab === "COMPLETED" ? (
                     <div className="kv-row">
                       <span className="kv-label">Work Order Completed</span>

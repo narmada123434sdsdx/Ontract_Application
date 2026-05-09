@@ -5,19 +5,20 @@ import "./css/AdminLogin.css";
 import { BASE_URLS } from "../api";
 import { useAdmin } from "../context/AdminContext";
 
-function AdminLogin() {
+// ✅ Firebase (WEB ONLY)
+import { getToken } from "firebase/messaging";
+import { messaging } from "../firebase";
+
+function AdminLogin({ setAdmin }) {
   const { loginAdmin } = useAdmin();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState("login");
-
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -42,18 +43,20 @@ function AdminLogin() {
       const data = await res.json();
 
       if (res.ok) {
+        console.log("✅ Admin login successful, OTP sent");
         setStep("otp");
       } else {
         setError(data.error || "Login failed");
       }
     } catch (err) {
+      console.error("❌ Admin login error:", err);
       setError("Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= VERIFY OTP ================= */
+  /* ================= OTP ================= */
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -64,6 +67,7 @@ function AdminLogin() {
     }
 
     setLoading(true);
+
     try {
       const res = await fetch(`${BASE_URLS.admin}/api/admin/verify_otp`, {
         method: "POST",
@@ -74,48 +78,74 @@ function AdminLogin() {
       const data = await res.json();
 
       if (res.ok) {
+        console.log("✅ OTP VERIFIED (ADMIN)");
+
+        // 🔥 Normalize admin data
         const adminData = {
-          email: data.admin_email,
+          ...data.admin_email,
           role: "ADMIN",
         };
 
+        // ✅ Store in context + localStorage
         loginAdmin(adminData);
+        setAdmin({ email: data.admin_email });
         localStorage.setItem("admin", JSON.stringify(adminData));
 
+        console.log("🧠 Admin stored:", adminData);
+
+        // =========================
+        // 🌐 WEB PUSH (ADMIN ONLY)
+        // =========================
+        let fcmToken = null;
+
+        try {
+          const permission = await Notification.requestPermission();
+
+          if (permission === "granted") {
+            fcmToken = await getToken(messaging, {
+              vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+            });
+
+            console.log("🔥 ADMIN WEB TOKEN:", fcmToken);
+          } else {
+            console.warn("❌ Notification permission denied");
+          }
+        } catch (err) {
+          console.error("❌ Token error:", err);
+        }
+
+        if (fcmToken) {
+          try {
+            await fetch(`${BASE_URLS.admin}/api/save_token`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                user_id: adminData.admin_id,
+                fcm_token: fcmToken,
+                device_type: "web",
+                role: "ADMIN", // 🔥 KEY POINT
+              }),
+            });
+
+            console.log("✅ Admin token saved");
+          } catch (err) {
+            console.error("❌ Save token error:", err);
+          }
+        }
+
+        // ✅ Navigate AFTER token save
         navigate("/admin/home", { replace: true });
+
       } else {
-        setError(data.error || "Invalid OTP");
+        setError(data.error || "OTP verification failed");
       }
     } catch (err) {
+      console.error("❌ OTP verify error:", err);
       setError("OTP verification failed");
     } finally {
       setLoading(false);
-    }
-  };
-
-  /* ================= RESEND OTP ================= */
-  const handleResendOtp = async () => {
-    setResendLoading(true);
-    setError("");
-
-    try {
-      const res = await fetch(`${BASE_URLS.admin}/api/admin/resend_otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setError("✅ OTP sent again to your email");
-      } else {
-        setError(data.error || "Failed to resend OTP");
-      }
-    } catch (err) {
-      setError("Failed to resend OTP");
-    } finally {
-      setResendLoading(false);
     }
   };
 
@@ -157,10 +187,7 @@ function AdminLogin() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
               />
-              <span
-                className="eye-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-              >
+              <span onClick={() => setShowPassword(!showPassword)}>
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </span>
             </div>
@@ -186,24 +213,6 @@ function AdminLogin() {
             <button className="go-btn" disabled={loading}>
               {loading ? "Verifying..." : "Verify OTP"}
             </button>
-
-            {/* RESEND OTP BUTTON */}
-            <div style={{ marginTop: "15px", textAlign: "center" }}>
-              <button
-                type="button"
-                onClick={handleResendOtp}
-                disabled={resendLoading}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#0066ff",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                }}
-              >
-                {resendLoading ? "Sending OTP..." : "Resend OTP"}
-              </button>
-            </div>
           </form>
         )}
       </div>

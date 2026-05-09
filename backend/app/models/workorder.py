@@ -1389,53 +1389,104 @@ class WorkOrder(db.Model):
             return None
         
         
+    # 🔥 ERROR REASON:
+# Inside try block, indentation or code structure is broken.
+# Python expects:
+# try:
+#    ...
+# except:
+# or finally:
+
+# ---------------------------------------------------
+# MOST COMMON ISSUE:
+# You inserted SQL code outside try block
+# OR forgot except
+# ---------------------------------------------------
+
+
+# ✅ CORRECT STRUCTURE:
+
+ 
+# 1️⃣ CONTRACTOR COMPLETES WORKORDER
+# ACCEPTED / REOPEN → COMPLETED
+# =========================================================
     @classmethod
-    def workorder_insert_admin_notification_close(cls,workorder,message,saved_images,provider_id):
+    def workorder_insert_admin_notification_close(cls, workorder, message, saved_images, provider_id):
         logging.info(f"admin_ → workorder: {workorder}, images: {saved_images}")
+        logging.info(f"checking by gopi reopen")
 
         try:
             # -----------------------------------
-            # 1️⃣ Check if notification already exists
+            # Check existing notification
             sql_check = text("""
-                SELECT id FROM admin_notifications_t WHERE workorder = :workorder LIMIT 1;
+                SELECT id
+                FROM admin_notifications_t
+                WHERE workorder = :workorder
+                LIMIT 1;
             """)
 
-            existing = db.session.execute(sql_check, {"workorder": workorder}).fetchone()
+            existing = db.session.execute(
+                sql_check,
+                {"workorder": workorder}
+            ).fetchone()
 
             if existing:
-                # -----------------------------------
-                # 🔁 UPDATE (REOPEN / RE-SUBMIT)
                 sql_notification = text("""
-                    UPDATE admin_notifications_t SET notification_type = 'WORKORDER_CLOSE',
-                    message = :message, updated_at = CURRENT_TIMESTAMP
+                    UPDATE admin_notifications_t
+                    SET notification_type = 'WORKORDER_CLOSE',
+                        message = :message,
+                        updated_at = CURRENT_TIMESTAMP
                     WHERE workorder = :workorder;
                 """)
 
-                db.session.execute(sql_notification, {"workorder": workorder,"message": message})
+                db.session.execute(sql_notification, {
+                    "workorder": workorder,
+                    "message": message
+                })
+
             else:
-                # -----------------------------------
-                # ✅ INSERT (FIRST TIME ONLY)
                 sql_notification = text("""
                     INSERT INTO admin_notifications_t
-                    (workorder, notification_type, message, created_by, created_at)
-                    VALUES (:workorder, 'WORKORDER_CLOSE', :message, :provider_id, CURRENT_TIMESTAMP);
+                    (
+                        workorder,
+                        notification_type,
+                        message,
+                        created_by,
+                        created_at
+                    )
+                    VALUES (
+                        :workorder,
+                        'WORKORDER_CLOSE',
+                        :message,
+                        :provider_id,
+                        CURRENT_TIMESTAMP
+                    );
                 """)
 
-                db.session.execute(sql_notification, {"workorder": workorder,"message": message,
+                db.session.execute(sql_notification, {
+                    "workorder": workorder,
+                    "message": message,
                     "provider_id": provider_id
                 })
 
             # -----------------------------------
-            # 2️⃣ Update workorder table
+            # Update workorder
             images_json = json.dumps(saved_images)
 
             sql_workorder = text("""
-                UPDATE workorder_t SET status = 'COMPLETED',
-                closing_images = CAST(:images AS JSONB) WHERE workorder = :workorder
+                UPDATE workorder_t
+                SET status = 'COMPLETED',
+                    closing_images = CAST(:images AS JSONB)
+                WHERE workorder = :workorder
                 RETURNING *;
             """)
 
-            row = db.session.execute(sql_workorder,{"images": images_json, "workorder": workorder}
+            row = db.session.execute(
+                sql_workorder,
+                {
+                    "images": images_json,
+                    "workorder": workorder
+                }
             ).mappings().fetchone()
 
             if not row:
@@ -1443,25 +1494,37 @@ class WorkOrder(db.Model):
                 return None, "Workorder not found"
 
             # -----------------------------------
-            # 3️⃣ Update lifecycle
+            # Update lifecycle
             sql_lifecycle = text("""
-                UPDATE workorder_life_cycle_t SET status = 'COMPLETED',
-                workorder_completed_time = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
-                WHERE workorder = :workorder AND contractor_id = :provider_id;
+                UPDATE workorder_life_cycle_t
+                SET status = 'COMPLETED',
+                    workorder_completed_time =
+                    (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
+                WHERE workorder = :workorder
+                AND contractor_id = :provider_id;
             """)
 
-            db.session.execute(sql_lifecycle, {"workorder": workorder,"provider_id": provider_id})
+            db.session.execute(sql_lifecycle, {
+                "workorder": workorder,
+                "provider_id": provider_id
+            })
 
             # -----------------------------------
-            # 4️⃣ Update assignment
+            # ACCEPTED / REOPEN → COMPLETED
             sql_assignment = text("""
-                UPDATE workorder_assignment_t SET assignment_status = 'COMPLETED'
-                WHERE "WORKORDER_ID" = :workorder AND provider_id = :provider_id;
+                UPDATE workorder_assignment_t
+                SET assignment_status = 'COMPLETED'
+                WHERE "WORKORDER_ID" = :workorder
+                AND provider_id = :provider_id;
             """)
 
-            db.session.execute(sql_assignment, {"workorder": workorder,"provider_id": provider_id})
+            db.session.execute(sql_assignment, {
+                "workorder": workorder,
+                "provider_id": provider_id
+            })
 
             db.session.commit()
+
             return dict(row), None
 
         except Exception as e:
@@ -1470,96 +1533,73 @@ class WorkOrder(db.Model):
             return None, str(e)
 
 
-
+    # =========================================================
+    # 2️⃣ ADMIN REOPEN WORKORDER
+    # COMPLETED → REOPEN
+    # =========================================================
     @classmethod
-    def workorder_insert_admin_notification_reopen(cls, workorder, admin_remarks):
+    def workorder_insert_admin_notification_reopen(
+        cls,
+        workorder,
+        admin_remarks
+    ):
         logging.info(f"🔁 Admin Reopen → workorder={workorder}")
 
         try:
-            # -------------------------------
             sql_workorder = text("""
-                UPDATE workorder_t SET status = 'REOPEN' WHERE workorder = :workorder
+                UPDATE workorder_t
+                SET status = 'REOPEN'
+                WHERE workorder = :workorder
                 RETURNING *;
             """)
 
-            row = db.session.execute(sql_workorder, {"workorder": workorder}).mappings().fetchone()
+            row = db.session.execute(
+                sql_workorder,
+                {"workorder": workorder}
+            ).mappings().fetchone()
 
             if not row:
                 db.session.rollback()
                 return None, "Workorder not found"
 
-            # -------------------------------
+            # -----------------------------------
+            # Lifecycle update
             sql_lifecycle = text("""
-                UPDATE workorder_life_cycle_t SET status = 'REOPEN',
-                workorder_reopen_time = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'),
-                admin_remarks = :admin_remarks WHERE workorder = :workorder;
-            """)
-
-            db.session.execute(sql_lifecycle,{"workorder": workorder,"admin_remarks": admin_remarks})
-
-            # -------------------------------
-            sql_assignment = text("""
-                UPDATE workorder_assignment_t SET assignment_status = 'REOPEN'
-                WHERE "WORKORDER_ID" = :workorder;
-            """)
-
-            db.session.execute(sql_assignment, {"workorder": workorder})
-
-            # -------------------------------
-            # ✅ NEW: update admin notification
-            sql_admin_notification = text("""
-                UPDATE admin_notifications_t SET notification_type = 'REOPEN' 
+                UPDATE workorder_life_cycle_t
+                SET status = 'REOPEN',
+                    workorder_reopen_time =
+                    (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'),
+                    admin_remarks = :admin_remarks
                 WHERE workorder = :workorder;
             """)
 
-            db.session.execute(sql_admin_notification, {"workorder": workorder})
-
-            # -------------------------------
-            db.session.commit()
-            return dict(row), None
-
-        except Exception as e:
-            db.session.rollback()
-            logging.exception("❌ Admin Notification Reopen DB Error")
-            return None, str(e)
-
-
-    @classmethod
-    def workorder_update_admin_notification_close(cls, workorder, admin_remarks):
-        logging.info(f"🔒 Admin Close → workorder={workorder}")
-
-        try:
-
-            sql_workorder = text("""
-                UPDATE workorder_t SET status = 'CLOSED' WHERE workorder = :workorder
-                RETURNING *;
-            """)
-
-            row = db.session.execute(sql_workorder, {"workorder": workorder}).mappings().fetchone()
-
-            if not row:
-                db.session.rollback()
-                return None, "Workorder not found"
+            db.session.execute(
+                sql_lifecycle,
+                {
+                    "workorder": workorder,
+                    "admin_remarks": admin_remarks
+                }
+            )
 
             # -----------------------------------
-            sql_lifecycle = text("""
-                UPDATE workorder_life_cycle_t SET status = 'CLOSED',
-                workorder_close_time = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'),
-                admin_remarks = :admin_remarks WHERE workorder = :workorder;
-            """)
-
-            db.session.execute(sql_lifecycle,{"workorder": workorder,"admin_remarks": admin_remarks})
-            # -----------------------------------
+            # COMPLETED → REOPEN
             sql_assignment = text("""
-                UPDATE workorder_assignment_t SET assignment_status = 'CLOSED'
-                WHERE "WORKORDER_ID" = :workorder and assignment_status='COMPLETED';
+                UPDATE workorder_assignment_t
+                SET assignment_status = 'REOPEN'
+                WHERE "WORKORDER_ID" = :workorder
+                AND assignment_status = 'COMPLETED'
             """)
 
-            db.session.execute(sql_assignment, {"workorder": workorder})
+            db.session.execute(
+                sql_assignment,
+                {"workorder": workorder}
+            )
 
-            # ✅ NEW: update admin notification status
+            # -----------------------------------
+            # Notification update
             sql_admin_notification = text("""
-                UPDATE admin_notifications_t SET notification_type = 'CLOSED'
+                UPDATE admin_notifications_t
+                SET notification_type = 'REOPEN'
                 WHERE workorder = :workorder;
             """)
 
@@ -1568,13 +1608,102 @@ class WorkOrder(db.Model):
                 {"workorder": workorder}
             )
 
-            # -----------------------------------
             db.session.commit()
+
             return dict(row), None
 
         except Exception as e:
             db.session.rollback()
-            logging.exception("❌ Admin Notification Close DB Error")
+            logging.exception(
+                "❌ Admin Notification Reopen DB Error"
+            )
+            return None, str(e)
+
+
+    # =========================================================
+    # 3️⃣ ADMIN FINAL CLOSE
+    # ONLY COMPLETED → CLOSED
+    # =========================================================
+    @classmethod
+    def workorder_update_admin_notification_close(
+        cls,
+        workorder,
+        admin_remarks
+    ):
+        logging.info(f"🔒 Admin Close → workorder={workorder}")
+
+        try:
+            sql_workorder = text("""
+                UPDATE workorder_t
+                SET status = 'CLOSED'
+                WHERE workorder = :workorder
+                RETURNING *;
+            """)
+
+            row = db.session.execute(
+                sql_workorder,
+                {"workorder": workorder}
+            ).mappings().fetchone()
+
+            if not row:
+                db.session.rollback()
+                return None, "Workorder not found"
+
+            # -----------------------------------
+            # Lifecycle update
+            sql_lifecycle = text("""
+                UPDATE workorder_life_cycle_t
+                SET status = 'CLOSED',
+                    workorder_close_time =
+                    (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'),
+                    admin_remarks = :admin_remarks
+                WHERE workorder = :workorder;
+            """)
+
+            db.session.execute(
+                sql_lifecycle,
+                {
+                    "workorder": workorder,
+                    "admin_remarks": admin_remarks
+                }
+            )
+
+            # -----------------------------------
+            # ONLY COMPLETED → CLOSED
+            sql_assignment = text("""
+                UPDATE workorder_assignment_t
+                SET assignment_status = 'CLOSED'
+                WHERE "WORKORDER_ID" = :workorder
+                AND assignment_status = 'COMPLETED'
+            """)
+
+            db.session.execute(
+                sql_assignment,
+                {"workorder": workorder}
+            )
+
+            # -----------------------------------
+            # Notification update
+            sql_admin_notification = text("""
+                UPDATE admin_notifications_t
+                SET notification_type = 'CLOSED'
+                WHERE workorder = :workorder;
+            """)
+
+            db.session.execute(
+                sql_admin_notification,
+                {"workorder": workorder}
+            )
+
+            db.session.commit()
+
+            return dict(row), None
+
+        except Exception as e:
+            db.session.rollback()
+            logging.exception(
+                "❌ Admin Notification Close DB Error"
+            )
             return None, str(e)
         
         
@@ -2164,5 +2293,113 @@ class WorkOrder(db.Model):
                 "success": False,
                 "message": str(e)
             }
+
+        # =========================================================
+    # MODEL
+    # SEARCH USER DETAILS
+    # =========================================================
+
+    @staticmethod
+    def get_admin_by_email(email):
+        try:
+            sql = text("""
+                SELECT
+                    admin_id,
+                    name,
+                    email,
+                    mobile,
+                    modules
+                FROM admins_t
+                WHERE LOWER(email) = LOWER(:email)
+            """)
+
+            admin = db.session.execute(
+                sql,
+                {"email": email}
+            ).mappings().first()
+
+            if not admin:
+                return {
+                    "success": False,
+                    "message": "User not found"
+                }
+
+            modules_list = (
+                [module.strip() for module in admin["modules"].split(",")]
+                if admin["modules"]
+                else []
+            )
+
+            return {
+                "success": True,
+                "data": {
+                    "admin_id": admin["admin_id"],
+                    "fullName": admin["name"],
+                    "email": admin["email"],
+                    "mobile": admin["mobile"],
+                    "modules": modules_list
+                }
+            }
+
+        except Exception as e:
+            logging.error("get_admin_by_email error", exc_info=True)
+
+            return {
+                "success": False,
+                "message": str(e)
+            }
+
+
+    # =========================================================
+    # MODEL
+    # UPDATE USER
+    # =========================================================
+
+    @staticmethod
+    def update_admin(req_data):
+        try:
+            email = req_data.get("email")
+
+            if not email:
+                return {
+                    "success": False,
+                    "message": "Email is required"
+                }
+
+            full_name = req_data.get("fullName")
+            mobile = req_data.get("mobile")
+            modules = req_data.get("modules", [])
+
+            sql = text("""
+                UPDATE admins_t
+                SET
+                    name = :name,
+                    mobile = :mobile,
+                    modules = :modules
+                WHERE LOWER(email) = LOWER(:email)
+            """)
+
+            db.session.execute(sql, {
+                "name": full_name,
+                "mobile": mobile,
+                "modules": ",".join(modules),
+                "email": email
+            })
+
+            db.session.commit()
+
+            return {
+                "success": True,
+                "message": "User updated successfully"
+            }
+
+        except Exception as e:
+            db.session.rollback()
+            logging.error("update_admin error", exc_info=True)
+
+            return {
+                "success": False,
+                "message": str(e)
+            }
+            
         
-    

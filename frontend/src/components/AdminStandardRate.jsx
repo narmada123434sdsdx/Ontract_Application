@@ -190,21 +190,36 @@ export default function AdminStandardRates() {
   };
 
   // Submit add/update
-  const handleSave = async () => {
+ const handleSave = async () => {
     if (!validateForm()) return;
 
     try {
+
+      let res;
+
       if (isEditing) {
-        await apiPut(`/api/admin/standard_rates/${editId}`, form);
-        alert("Updated successfully");
+        res = await apiPut(`/api/admin/standard_rates/${editId}`,
+          form
+        );
       } else {
-        await apiPost(`/api/admin/standard_rates`, form);
-        alert("Added successfully");
+        res = await apiPost(`/api/admin/standard_rates`,
+          form
+        );
       }
-      setShowModal(false);
-      fetchRates();
+
+      if (res.success) {
+        alert(res.message);
+        setShowModal(false);
+        fetchRates();
+
+      } else {
+        alert(res.message || "Record already exists");
+
+      }
+
     } catch (err) {
       alert(err.message || "Operation failed");
+
     }
   };
 

@@ -394,20 +394,22 @@ class AdminController:
     @staticmethod
     def add_standard_rate(payload):
         try:
-            AdminModel.add_standard_rate(payload)
-            return {"message": "Rate added"}, 201
+            response = AdminModel.add_standard_rate(payload)
+            return response, 200
+
         except Exception as e:
             current_app.logger.exception("Add rate failed")
-            return {"error": str(e)}, 500
+            return {"success": False, "error": str(e)}, 500
 
     @staticmethod
     def update_standard_rate(rate_id, payload):
         try:
-            AdminModel.update_standard_rate(rate_id, payload)
-            return {"message": "Rate updated"}, 200
+            response = AdminModel.update_standard_rate(rate_id,payload)
+            return response, 200
+
         except Exception as e:
             current_app.logger.exception("Update rate failed")
-            return {"error": str(e)}, 500
+            return {"success": False, "error": str(e)}, 500
 
     @staticmethod
     def delete_standard_rate(rate_id):

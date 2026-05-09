@@ -589,26 +589,25 @@ class ProviderModel:
             return [], str(e)
 
     @staticmethod
-    def save_token(user_id, fcm_token, device_type):
-        logging.info(f"Saving token for user: {user_id}")
+    def save_token(user_id, fcm_token, device_type, role):
+        logging.info(f"Saving token for user: {user_id}, role: {role}")
 
         try:
-            # 🔥 STEP 1: DELETE OLD TOKENS
-            sql_delete = text("""
-                DELETE FROM user_tokens WHERE user_id = :user_id
-            """)
-            db.session.execute(sql_delete, {"user_id": user_id})
-
-            # 🔥 STEP 2: INSERT NEW TOKEN
-            sql_insert = text("""
-                INSERT INTO user_tokens (user_id,fcm_token,device_type,status,created_at) VALUES (
-                :user_id,:fcm_token,:device_type,0,CURRENT_TIMESTAMP)
+            sql = text("""
+                INSERT INTO user_tokens (user_id, fcm_token, device_type, role, status, created_at)
+                VALUES (:user_id, :fcm_token, :device_type, :role, 0, CURRENT_TIMESTAMP)
+                ON CONFLICT (fcm_token, role)
+                DO UPDATE SET
+                    user_id = EXCLUDED.user_id,
+                    device_type = EXCLUDED.device_type,
+                    updated_at = CURRENT_TIMESTAMP
             """)
 
-            db.session.execute(sql_insert, {
+            db.session.execute(sql, {
                 "user_id": user_id,
                 "fcm_token": fcm_token,
-                "device_type": device_type
+                "device_type": device_type,
+                "role": role
             })
 
             db.session.commit()

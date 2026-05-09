@@ -58,8 +58,9 @@ def save_token():
     user_id = data.get("user_id")
     fcm_token = data.get("fcm_token")
     device_type = data.get("device_type", "web")
+    role = data.get("role")
 
-    result, status = ProviderController.save_token(user_id,fcm_token,device_type)
+    result, status = ProviderController.save_token(user_id,fcm_token,device_type,role)
 
     return jsonify(result), status
 

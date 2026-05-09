@@ -3,6 +3,7 @@ import "./css/ProviderProfile.css";
 import { apiGet, apiPost } from "../api";
 import { useUser } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 function ProviderPersonalDetails() {
   const { user } = useUser();
@@ -635,9 +636,18 @@ let finalBilling = billingAddress.trim();
 if (mailingPostalCode) finalMailing += `, ${mailingPostalCode}`;
 if (billingPostalCode) finalBilling += `, ${billingPostalCode}`;
 
- if (!bumiputera) {
-    newErrors.bumiputera = "Please select Bumiputera status";
-  }
+const newErrors = {};
+
+if (!bumiputera) {
+  newErrors.bumiputera =
+    "Please select Bumiputera status";
+}
+
+if (Object.keys(newErrors).length > 0) {
+  setErrors(newErrors);
+  setLoading(false);
+  return;
+}
 
 if (!locationServiceList.length) {
   setErrors({ services: "Add at least one service" });
@@ -707,14 +717,40 @@ formData.append("billing_address", finalBilling);
     if (profileImage) formData.append("profile_image", profileImage);
     if (certificate) formData.append("certificate", certificate);
 
-    try {
-      await apiPost("/api/update_profile", formData);
-      // navigate("/provider/profile");   // ✅ BACK TO PROFILE
-    } catch (err) {
-      setErrors({ general: "Profile update failed" });
-    } finally {
-      setLoading(false);
-    }
+try {
+  const response = await apiPost(
+    "/api/update_profile",
+    formData
+  );
+
+  await Swal.fire({
+    icon: "success",
+    title: "Success",
+    text: "Profile updated successfully",
+    confirmButtonText: "OK",
+  });
+
+  // optional redirect
+  // navigate("/provider/profile");
+
+} catch (err) {
+  console.error(err);
+
+  Swal.fire({
+    icon: "error",
+    title: "Update Failed",
+    text:
+      err?.response?.data?.message ||
+      "Profile update failed",
+  });
+
+  setErrors({
+    general: "Profile update failed",
+  });
+
+} finally {
+  setLoading(false);
+}
   };
 
   if (!user) {

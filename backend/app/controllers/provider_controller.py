@@ -129,11 +129,11 @@ class ProviderController:
             "user": user
         }, 200
     @staticmethod
-    def save_token(user_id, fcm_token, device_type):
+    def save_token(user_id, fcm_token, device_type, role):
         logging.info(f"check savetoken input: {user_id}")
        
         try:
-            success, error = ProviderModel.save_token(user_id,fcm_token,device_type)
+            success, error = ProviderModel.save_token(user_id,fcm_token,device_type, role)
 
             if not success:
                 return {"success": False,"error": error}, 500

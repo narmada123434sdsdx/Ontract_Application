@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import AdminDashboard from './AdminDashboard';
@@ -16,29 +15,48 @@ import WorkorderReport from './WorkorderReport';
 import SummaryReport from './SummaryReport';
 import RateComparisonReport from './RateComparisonReport';
 import RegistrationPage from './AdminRegistration';
+import AdminUpdate from './AdminUpdate';
 
 function AdminApp({ admin, setAdmin }) {
   const { admin: ctxAdmin, loading } = useAdmin();
 
   const navigate = useNavigate();
+
   const [activeLink, setActiveLink] = useState('home');
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
+  const [registrationOpen, setRegistrationOpen] = useState(false);
 
-  // ✅ Get assigned modules from logged-in admin
-  const modules = ctxAdmin?.email?.modules
-    ? ctxAdmin.email.modules.split(',').map((m) => m.trim())
-    : [];
+  // 🔥 Get assigned modules from DB
+  const modules = ctxAdmin?.modules
+   ? ctxAdmin.modules.split(",").map((m) => m.trim())
+   : [];
 
-  // ✅ Helper function
-  const hasModule = (moduleName) => modules.includes(moduleName);
+ const hasModule = (moduleName) => modules.includes(moduleName);
 
+ 
+
+  // 🔥 Login check
   useEffect(() => {
     const storedAdmin = localStorage.getItem('admin');
     if (!storedAdmin) {
       navigate('/admin/login');
     }
   }, [navigate]);
+
+  // 🔥 Close dropdowns on outside click
+  useEffect(() => {
+    const closeMenus = () => {
+      setRegistrationOpen(false);
+      setReportsOpen(false);
+    };
+
+    document.addEventListener('click', closeMenus);
+
+    return () => {
+      document.removeEventListener('click', closeMenus);
+    };
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('admin');
@@ -49,19 +67,23 @@ function AdminApp({ admin, setAdmin }) {
   const handleLinkClick = (link) => {
     setActiveLink(link);
     setMenuOpen(false);
+    setRegistrationOpen(false);
+    setReportsOpen(false);
   };
 
   if (loading) return null;
 
   return (
     <div className="admin-app">
-      {/* Top Navbar */}
+      {/* =========================================
+          TOP NAVBAR
+      ========================================= */}
       <nav className="admin-navbar">
         <div className="nav-left">
           <h3 className="nav-title">Admin Portal</h3>
         </div>
 
-        {/* Mobile toggle */}
+        {/* Mobile Menu Toggle */}
         <button
           className="menu-toggle"
           onClick={() => setMenuOpen(!menuOpen)}
@@ -70,8 +92,11 @@ function AdminApp({ admin, setAdmin }) {
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* Navigation */}
+        {/* =========================================
+            NAVIGATION LINKS
+        ========================================= */}
         <ul className={`nav-links ${menuOpen ? 'open' : ''}`}>
+
           {/* Home */}
           {hasModule('Home') && (
             <li>
@@ -85,16 +110,40 @@ function AdminApp({ admin, setAdmin }) {
             </li>
           )}
 
-          {/* Registration */}
+          {/* =========================================
+              REGISTRATION DROPDOWN
+          ========================================= */}
           {hasModule('Registration') && (
-            <li>
-              <Link
-                to="/admin/registration"
-                className={activeLink === 'registration' ? 'active' : ''}
-                onClick={() => handleLinkClick('registration')}
+            <li className="nav-item registration-menu">
+              <div
+                className="nav-link"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRegistrationOpen(!registrationOpen);
+                }}
               >
                 Registration
-              </Link>
+              </div>
+
+              <ul className={`reports-dropdown ${registrationOpen ? 'open' : ''}`}>
+                <li>
+                  <Link
+                    to="/admin/registration"
+                    onClick={() => handleLinkClick('registration')}
+                  >
+                    New Registration
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    to="/admin/update-user"
+                    onClick={() => handleLinkClick('update_user')}
+                  >
+                    Update User
+                  </Link>
+                </li>
+              </ul>
             </li>
           )}
 
@@ -125,17 +174,17 @@ function AdminApp({ admin, setAdmin }) {
           )}
 
           {/* Standard Rate */}
-          
-            <li>
-              <Link
-                to="/admin/standard_rate"
-                className={activeLink === 'standard_rate' ? 'active' : ''}
-                onClick={() => handleLinkClick('standard_rate')}
-              >
-                Standard Rate
-              </Link>
-            </li>
-          
+          {hasModule('Standard Rate') && (
+  <li>
+    <Link
+      to="/admin/standard_rate"
+      className={activeLink === 'standard_rate' ? 'active' : ''}
+      onClick={() => handleLinkClick('standard_rate')}
+    >
+      Standard Rate
+    </Link>
+  </li>
+)}
 
           {/* Management */}
           {hasModule('Management') && (
@@ -163,12 +212,17 @@ function AdminApp({ admin, setAdmin }) {
             </li>
           )}
 
-          {/* Reports */}
+          {/* =========================================
+              REPORTS DROPDOWN
+          ========================================= */}
           {hasModule('Reports') && (
             <li className="nav-item reports-menu">
               <div
                 className="nav-link"
-                onClick={() => setReportsOpen(!reportsOpen)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setReportsOpen(!reportsOpen);
+                }}
               >
                 REPORTS
               </div>
@@ -219,24 +273,79 @@ function AdminApp({ admin, setAdmin }) {
               Logout
             </button>
           </li>
+
         </ul>
       </nav>
 
-      {/* Page Content */}
+      {/* =========================================
+          PAGE CONTENT
+      ========================================= */}
       <div className="admin-content">
         <Routes>
-          <Route path="/home" element={<AdminHome admin={admin} setAdmin={setAdmin} />} />
-          <Route path="/workorder/*" element={<WorkOrderLayout />} />
-          <Route path="/setuppage/*" element={<SetuppageLayout />} />
-          <Route path="/standard_rate" element={<AdminStandardRate admin={admin} setAdmin={setAdmin} />} />
-          <Route path="/admindashboard" element={<AdminDashboard admin={admin} setAdmin={setAdmin} />} />
-          <Route path="/invoice" element={<InvoiceCreate />} />
-          <Route path="/adminnotifications" element={<AdminNotifications />} />
-          <Route path="/reports/contractor" element={<ContractorReport />} />
-          <Route path="/reports/workorder" element={<WorkorderReport />} />
-          <Route path="/reports/summary" element={<SummaryReport />} />
-          <Route path="/reports/rate-comparison" element={<RateComparisonReport />} />
-          <Route path="/registration" element={<RegistrationPage />} />
+          <Route
+            path="/home"
+            element={<AdminHome admin={admin} setAdmin={setAdmin} />}
+          />
+
+          <Route
+            path="/workorder/*"
+            element={<WorkOrderLayout />}
+          />
+
+          <Route
+            path="/setuppage/*"
+            element={<SetuppageLayout />}
+          />
+
+          <Route
+            path="/standard_rate"
+            element={<AdminStandardRate admin={admin} setAdmin={setAdmin} />}
+          />
+
+          <Route
+            path="/admindashboard"
+            element={<AdminDashboard admin={admin} setAdmin={setAdmin} />}
+          />
+
+          <Route
+            path="/invoice"
+            element={<InvoiceCreate />}
+          />
+
+          <Route
+            path="/adminnotifications"
+            element={<AdminNotifications />}
+          />
+
+          <Route
+            path="/reports/contractor"
+            element={<ContractorReport />}
+          />
+
+          <Route
+            path="/reports/workorder"
+            element={<WorkorderReport />}
+          />
+
+          <Route
+            path="/reports/summary"
+            element={<SummaryReport />}
+          />
+
+          <Route
+            path="/reports/rate-comparison"
+            element={<RateComparisonReport />}
+          />
+
+          <Route
+            path="/registration"
+            element={<RegistrationPage />}
+          />
+
+          <Route
+            path="/update-user"
+            element={<AdminUpdate />}
+          />
         </Routes>
       </div>
     </div>
@@ -244,4 +353,3 @@ function AdminApp({ admin, setAdmin }) {
 }
 
 export default AdminApp;
-

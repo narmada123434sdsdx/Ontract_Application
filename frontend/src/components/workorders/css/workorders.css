@@ -305,3 +305,133 @@
   background-color: #f0f0f0;
   transition: 0.2s ease-in-out;
 }
+
+/* =================================
+   WORKORDER DETAILS MODAL
+================================= */
+
+.workorders-page .modal-content.large-modal {
+  display: block !important;
+  width: 420px;
+  max-width: 95%;
+  max-height: 85vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  position: relative;
+}
+
+.workorders-page .modal-close-icon {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #999;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+.workorders-page .modal-close-icon:hover {
+  color: #333;
+}
+.workorders-page .modal-content.large-modal h2 {
+  color: #0078d4;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+/* DETAILS GRID */
+.workorders-page .kv-grid {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.workorders-page .kv-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  border-bottom: 1px solid #ddd;
+}
+
+.workorders-page .kv-row:last-child {
+  border-bottom: none;
+}
+
+.workorders-page .kv-label {
+  background: #f5f5f5;
+  padding: 10px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.workorders-page .kv-value {
+  padding: 10px;
+  text-align: left;
+}
+
+/* CLICKABLE WORKORDER */
+.workorders-page .workorder-link {
+  color: #007bff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.workorders-page .workorder-link:hover {
+  text-decoration: underline;
+}
+
+/* IMAGE GRID */
+.workorders-page .media-preview-grid.large {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.workorders-page .media-preview {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+
+/* REMARKS */
+.workorders-page .contractor-remarks {
+  margin-top: 20px;
+}
+
+.workorders-page .contractor-remarks label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.workorders-page .contractor-remarks textarea {
+  width: 100%;
+  min-height: 70px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  resize: vertical;
+}
+
+/* IMAGE PREVIEW */
+.workorders-page .zoom-media {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 6px;
+}
+
+/* SCROLLBAR */
+.workorders-page .large-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.workorders-page .large-modal::-webkit-scrollbar-thumb {
+  background: #bdbdbd;
+  border-radius: 10px;
+}

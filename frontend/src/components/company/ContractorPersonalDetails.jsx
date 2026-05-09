@@ -3,6 +3,7 @@ import "./css/CompanyProfile.css";
 import { apiGet, apiPost } from "../../api";
 import { useContractor } from "../../context/ContractorContext";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 function ContractorPersonalDetails() {
 const { contractor } = useContractor() || {};
@@ -660,13 +661,38 @@ if (billingPostalCode) finalBilling += `, ${billingPostalCode}`;
   if (profileImage) payload.append("profile_image", profileImage);
   if (certificate) payload.append("certificate", certificate);
 
-  try {
-    await apiPost("/api/contractor/update_company_profile", payload);
-  } catch (err) {
-    setErrors({ general: "Profile update failed" });
-  } finally {
-    setLoading(false);
-  }
+try {
+  const response = await apiPost(
+    "/api/contractor/update_company_profile",
+    payload
+  );
+
+  await Swal.fire({
+    icon: "success",
+    title: "Success",
+    text: "Contractor profile updated successfully",
+    confirmButtonText: "OK",
+  });
+
+  // optional navigation
+  // navigate("/contractor/home");
+
+} catch (err) {
+  console.error(err);
+
+  Swal.fire({
+    icon: "error",
+    title: "Update Failed",
+    text:
+      err?.response?.data?.message ||
+      "Profile update failed",
+  });
+
+  setErrors({ general: "Profile update failed" });
+
+} finally {
+  setLoading(false);
+}
 };
 
 

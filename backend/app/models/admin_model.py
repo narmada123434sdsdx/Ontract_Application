@@ -754,36 +754,50 @@ class AdminModel:
 
     @staticmethod
     def add_standard_rate(payload):
-        cols = ["source_row_number","category","item","type","sub_type","brand","description","unit",
-        "copper_pipe_price","price_rm","client","extra_col"]
+
+        cols = [
+            "source_row_number","category","item","type","sub_type","brand","description","unit",
+            "copper_pipe_price","price_rm","client","extra_col"
+        ]
 
         params = {k: payload.get(k) for k in cols}
+
         params["copper_pipe_price"] = parse_numeric(params.get("copper_pipe_price"))
+
         params["price_rm"] = parse_numeric(params.get("price_rm"))
+
+        duplicate_sql = text("""
+            SELECT id FROM standard_rates_t WHERE category = :category AND item = :item
+            AND "type" = :type AND description = :description AND client = :client
+            LIMIT 1
+        """)
+
+        duplicate = db.session.execute(duplicate_sql,params).fetchone()
+
+        if duplicate:
+            return {
+                "success": False,
+                "message": "Record already exists"
+            }
 
         insert_sql = text("""
             INSERT INTO standard_rates_t (source_row_number,category,item,"type",sub_type,brand,
-            description,unit,copper_pipe_price,price_rm,client,extra_col,created_at,updated_at)
+                description,unit,copper_pipe_price,price_rm,client,extra_col,created_at,updated_at)
             VALUES (:source_row_number,:category,:item,:type,:sub_type,:brand,:description,:unit,
-            :copper_pipe_price,:price_rm,:client,:extra_col,NOW(),NOW()
-            )
-            ON CONFLICT (category, item, "type", description, unit)
-            DO UPDATE SET
-                sub_type = COALESCE(EXCLUDED.sub_type, standard_rates_t.sub_type),
-                brand = COALESCE(EXCLUDED.brand, standard_rates_t.brand),
-                copper_pipe_price = COALESCE(EXCLUDED.copper_pipe_price, standard_rates_t.copper_pipe_price),
-                price_rm = COALESCE(EXCLUDED.price_rm, standard_rates_t.price_rm),
-                client = COALESCE(EXCLUDED.client, standard_rates_t.client),
-                extra_col = COALESCE(EXCLUDED.extra_col, standard_rates_t.extra_col),
-                updated_at = NOW()
+                :copper_pipe_price,:price_rm,:client,:extra_col,NOW(),NOW())
         """)
 
         db.session.execute(insert_sql, params)
         db.session.commit()
 
+        return {
+            "success": True,
+            "message": "Rate added"
+        }
 
     @staticmethod
     def update_standard_rate(rate_id, payload):
+
         params = {
             "id": rate_id,
             "category": payload.get("category"),
@@ -799,16 +813,34 @@ class AdminModel:
             "extra_col": payload.get("extra_col")
         }
 
+        duplicate_sql = text("""
+            SELECT id FROM standard_rates_t WHERE category = :category AND item = :item
+            AND "type" = :type AND description = :description AND client = :client AND id != :id
+            LIMIT 1
+        """)
+
+        duplicate = db.session.execute(duplicate_sql,params).fetchone()
+
+        if duplicate:
+            return {
+                "success": False,
+                "message": "Record already exists"
+            }
+
         update_sql = text("""
             UPDATE standard_rates_t SET category = :category,item = :item,"type" = :type,
-            sub_type = :sub_type,brand = :brand,description = :description,unit = :unit,
-            copper_pipe_price = :copper_pipe_price,price_rm = :price_rm,client = :client,
-            extra_col = :extra_col,updated_at = NOW() WHERE id = :id
+                sub_type = :sub_type,brand = :brand,description = :description,unit = :unit,
+                copper_pipe_price = :copper_pipe_price,price_rm = :price_rm,client = :client,
+                extra_col = :extra_col,updated_at = NOW() WHERE id = :id
         """)
 
         db.session.execute(update_sql, params)
         db.session.commit()
 
+        return {
+            "success": True,
+            "message": "Rate updated"
+        }
 
 
 
@@ -898,7 +930,3 @@ class AdminModel:
         result = db.session.execute(sql, {"uid": user_uid}).mappings().all()
     
         return result
-    
-            
-        
-        

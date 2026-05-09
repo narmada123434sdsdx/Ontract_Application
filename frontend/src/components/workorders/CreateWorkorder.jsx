@@ -11,6 +11,7 @@ const CreateWorkOrder = () => {
   // ===== CLIENT / ASSIGNMENT / REMARKS / TIME / ADDRESS / STATUS =====
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState("");
+  const [selectedRate, setSelectedRate] = useState(null);
   const [ticketAssignmentType, setTicketAssignmentType] = useState("auto");
   const [address, setAddress] = useState("");
 
@@ -21,11 +22,11 @@ const CreateWorkOrder = () => {
   });
 
   // ===== CATEGORY → ITEM → TYPE → DESCRIPTION =====
-  const [detailedDescription, setDetailedDescription] = useState("");
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [types, setTypes] = useState([]);
   const [descriptionsDrop, setDescriptionsDrop] = useState([]);
+  const [detailedDescription, setDetailedDescription] = useState("");
 
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedItemId, setSelectedItemId] = useState("");
@@ -37,10 +38,10 @@ const CreateWorkOrder = () => {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
 
-  const [clientWarningShown, setClientWarningShown] = useState(false);
   const [selectedRegionId, setSelectedRegionId] = useState("");
   const [selectedStateId, setSelectedStateId] = useState("");
   const [selectedCityId, setSelectedCityId] = useState("");
+  const [clientWarningShown, setClientWarningShown] = useState(false);
 
   // ===== IMAGES =====
   const [images, setImages] = useState([]);
@@ -67,7 +68,6 @@ const CreateWorkOrder = () => {
     loadInitial();
   }, []);
 
-
   const fetchClients = async (
     categoryId,
     itemId,
@@ -89,26 +89,18 @@ const CreateWorkOrder = () => {
 
       const dataClients = await apiGet(url);
 
-      const validClients = (dataClients || [])
-        .map((item) => item.client)
-        .filter((c) => c && c.trim()); // remove null/empty
-
       // 🚨 NO CLIENT CASE
-      if (validClients.length === 0) {
-        setClients([]);
-        setSelectedClient("");
+      if (!dataClients || dataClients.length === 0) 
+        { setClients([]); setSelectedClient(""); 
+          setSelectedRate(null); 
+          Swal.fire({ icon: "warning", 
+            title: "No Client Found", 
+            text: "There is no client for this workscope", 
+          }); 
+          return; 
+        }
 
-        Swal.fire({
-          icon: "warning",
-          title: "No Client Found",
-          text: "There is no client for this workscope",
-        });
-
-        return;
-      }
-
-      const uniqueClients = Array.from(new Set(validClients));
-      setClients(uniqueClients);
+      setClients(dataClients);
 
     } catch (err) {
       console.error("Client fetch error:", err);
@@ -116,7 +108,8 @@ const CreateWorkOrder = () => {
     }
   };
 
-  useEffect(() => {
+
+   useEffect(() => {
     fetchClients(
       selectedCategoryId,
       selectedItemId,
@@ -129,8 +122,6 @@ const CreateWorkOrder = () => {
     selectedTypeId,
     selectedDescriptionId,
   ]);
-
-
 
   // ===============================
   // CATEGORY → ITEM → TYPE → DESCRIPTION
@@ -172,7 +163,7 @@ const CreateWorkOrder = () => {
     setTypes([]);
     setDescriptionsDrop([]);
     setClients([]);
-    setSelectedClient("");
+    setSelectedClient(""); 
   }, [selectedCategoryId]);
 
   useEffect(() => {
@@ -184,7 +175,7 @@ const CreateWorkOrder = () => {
     setSelectedDescriptionId("");
     setDescriptionsDrop([]);
     setClients([]);
-    setSelectedClient("");
+    setSelectedClient(""); 
   }, [selectedItemId]);
 
   useEffect(() => {
@@ -198,7 +189,7 @@ const CreateWorkOrder = () => {
 
     setSelectedDescriptionId("");
     setClients([]);
-    setSelectedClient("");
+    setSelectedClient(""); 
   }, [selectedTypeId]);
 
   // ===============================
@@ -268,7 +259,7 @@ const CreateWorkOrder = () => {
     try {
       const formDataToSend = new FormData();
 
-      formDataToSend.append("ADMIN_ID", admin.email.admin_id);
+      formDataToSend.append("ADMIN_ID", admin.admin_id);
       formDataToSend.append("CATEGORY_ID", selectedCategoryId);
       formDataToSend.append("ITEM_ID", selectedItemId);
       formDataToSend.append("TYPE_ID", selectedTypeId);
@@ -279,17 +270,17 @@ const CreateWorkOrder = () => {
       formDataToSend.append("CITY_ID", selectedCityId);
 
       formDataToSend.append("CLIENT", selectedClient);
+      formDataToSend.append( "STANDARD_RATE_ID", selectedRate?.standard_rate_id || "" );
+      formDataToSend.append( "RATE_SNAPSHOT", selectedRate?.price_rm || "" );
       formDataToSend.append("ADDRESS", address);
       formDataToSend.append(
         "REQUESTED_TIME_CLOSING",
         formData.REQUESTED_TIME_CLOSING
       );
       formDataToSend.append("REMARKS", formData.REMARKS);
-       formDataToSend.append(
-        "DETAILED_DESCRIPTION",
-        detailedDescription || ""
-      );
+      formDataToSend.append("DETAILED_DESCRIPTION",detailedDescription || "");
       formDataToSend.append("STATUS", formData.STATUS);
+      
       formDataToSend.append(
         "ticket_assignment_type",
         ticketAssignmentType
@@ -375,23 +366,6 @@ const CreateWorkOrder = () => {
   // ===============================
   // UI
   // ===============================
-// ✅ Tooltip Full Name for Selected Item
-const selectedItemName =
-  items.find((it) => it.item_id === Number(selectedItemId))
-    ?.item_name || "";
-
-// ✅ Tooltip Full Name for Selected Type
-const selectedTypeName =
-  types.find((t) => t.type_id === Number(selectedTypeId))
-    ?.type_name || "";
-
-const selectedDescriptionName =
-  descriptionsDrop.find((d) => d.description_id === Number(selectedDescriptionId))
-    ?.description_name || "";
-
-
-
-
   return (
 <div className="page-container full-page create-workorder-page">
 
@@ -425,93 +399,52 @@ const selectedDescriptionName =
             </div>
 
             <div className="form-group required-wrapper">
-<select
-  required
-  value={selectedItemId}
-  onChange={(e) => setSelectedItemId(e.target.value)}
-  disabled={!selectedCategoryId}
-
-  // ✅ Hover shows full selected item name
-  title={selectedItemName}
->
-
+              <select
+                required
+                value={selectedItemId}
+                onChange={(e) => setSelectedItemId(e.target.value)}
+                disabled={!selectedCategoryId}
+              >
                 <option value="">Select Item</option>
-{items.map((it) => (
-  <option
-    key={it.id}
-    value={it.item_id}
-
-    // ✅ Hover shows full item name inside dropdown
-    title={it.item_name}
-  >
-    {it.item_name.length > 25
-      ? it.item_name.substring(0, 15) + "..."
-      : it.item_name}
-  </option>
-))}
-
-
+                {items.map((it) => (
+                  <option key={it.id} value={it.item_id}>
+                    {it.item_name}
+                  </option>
+                ))}
               </select>
               <span className="required-star">★</span>
             </div>
 
             <div className="form-group required-wrapper">
-<select
-  required
-  value={selectedTypeId}
-  onChange={(e) => setSelectedTypeId(e.target.value)}
-  disabled={!selectedItemId}
-
-  // ✅ Hover shows full selected type name
-  title={selectedTypeName}
->
-
-
+              <select
+                required
+                value={selectedTypeId}
+                onChange={(e) => setSelectedTypeId(e.target.value)}
+                disabled={!selectedItemId}
+              >
                 <option value="">Select Type</option>
-{types.map((t) => (
-  <option
-    key={t.id}
-    value={t.type_id}
-
-    // ✅ Hover shows full type name inside dropdown
-    title={t.type_name}
-  >
-    {t.type_name.length > 25
-      ? t.type_name.substring(0, 15) + "..."
-      : t.type_name}
-  </option>
-))}
-
-
+                {types.map((t) => (
+                  <option key={t.id} value={t.type_id}>
+                    {t.type_name}
+                  </option>
+                ))}
               </select>
               <span className="required-star">★</span>
             </div>
 
             <div className="form-group required-wrapper">
-<select
-  required
-  value={selectedDescriptionId}
-  onChange={(e) => setSelectedDescriptionId(e.target.value)}
-  disabled={!selectedTypeId}
-  title={selectedDescriptionName}
->
-
+              <select
+                required
+                value={selectedDescriptionId}
+                onChange={(e) => setSelectedDescriptionId(e.target.value)}
+                disabled={!selectedTypeId}
+              >
                 <option value="">Select Description</option>
-{descriptionsDrop.map((d) => (
-  <option
-    key={d.id}
-    value={d.description_id}
-
-    // ✅ Hover shows full description name
-    title={d.description_name}
-  >
-    {d.description_name.length > 25
-      ? d.description_name.substring(0, 15) + "..."
-      : d.description_name}
-  </option>
-))}
-
-
+                {descriptionsDrop.map((d) => (
+                  <option key={d.id} value={d.description_id}>
+                    {d.description_name}
+                  </option>
+                ))}
               </select>
               <span className="required-star">★</span>
             </div>
@@ -521,7 +454,7 @@ const selectedDescriptionName =
         {/* REGION / STATE / CITY / CLIENT */}
         <div className="form-group full-width combined-row">
           <div className="combined-header">
-            <div className="header-item">Region</div>
+            <div className="header-item">Zone</div>
             <div className="header-item">State</div>
             <div className="header-item">City</div>
             <div className="header-item">Client</div>
@@ -534,7 +467,7 @@ const selectedDescriptionName =
                 value={selectedRegionId}
                 onChange={(e) => setSelectedRegionId(e.target.value)}
               >
-                <option value="">Select Region</option>
+                <option value="">Select Zone</option>
                 {regions.map((r) => (
                   <option key={r.id} value={r.region_id}>
                     {r.region_name}
@@ -582,14 +515,18 @@ const selectedDescriptionName =
               <select
                 required
                 value={selectedClient}
-                onChange={(e) => setSelectedClient(e.target.value)}
+                onChange={(e) => { 
+                  const selected = clients.find( (c) => c.client === e.target.value );
+                   setSelectedClient(e.target.value);
+                    setSelectedRate(selected); 
+                  }}
               >
                 <option value="">Select Client</option>
-                {clients.map((cl) => (
-                  <option key={cl} value={cl}>
-                    {cl}
-                  </option>
-                ))}
+                  {clients.map((cl) => ( 
+                    <option key={cl.standard_rate_id} 
+                      value={cl.client} 
+                    > {cl.client} 
+                </option> ))}
               </select>
               <span className="required-star">★</span>
             </div>
@@ -603,7 +540,6 @@ const selectedDescriptionName =
             <div className="header-item">Assignment Type</div>
             <div className="header-item">Requested Time Closing</div>
             <div className="header-item">Remarks</div>
-            
           </div>
 
           <div className="combined-body">
@@ -615,7 +551,6 @@ const selectedDescriptionName =
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
               />
-              
               <span className="required-star">★</span>
             </div>
 
@@ -652,28 +587,29 @@ const selectedDescriptionName =
                 value={formData.REMARKS}
                 onChange={handleChange}
               />
-              
               <span className="required-star">★</span>
             </div>
           </div>
         </div>
+        
+        <div className="form-group full-width combined-row">
+          <div className="combined-header single-header">
+            <div className="header-item">Detailed Description</div>
+          </div>
 
-          <div className="form-group full-width combined-row">
-  <div className="combined-header single-header">
-    <div className="header-item">Detailed Description</div>
-  </div>
-
-  <div className="combined-body">
-    <div className="form-group">
-      <textarea
-        placeholder="Detailed Description"
-        value={detailedDescription}
-        onChange={(e) => setDetailedDescription(e.target.value)}
-        rows={3}
-      />
-    </div>
-  </div>
-</div>
+          <div className="combined-body">
+            <div className="form-group">
+              <textarea
+                placeholder="Detailed Description"
+                value={detailedDescription}
+                onChange={(e) =>
+                  setDetailedDescription(e.target.value)
+                }
+                rows={3}
+              />
+            </div>
+          </div>
+        </div>
 
         {/* IMAGE UPLOAD */}
         <div className="form-group full-width combined-row">
@@ -683,27 +619,12 @@ const selectedDescriptionName =
 
           <div className="combined-body image-upload-body">
             <input
-  type="file"
-  accept="image/*"
-  multiple
-  onChange={(e) => {
-    const files = Array.from(e.target.files);
-
-    const onlyImages = files.filter((file) =>
-      file.type.startsWith("image/")
-    );
-
-    if (onlyImages.length !== files.length) {
-      alert("❌ ZIP or non-image files are not allowed.");
-    }
-
-    // ✅ send filtered files to existing logic
-    handleImageChange(onlyImages);
-  }}
-  className="file-input"
-/>
-                            
-            
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => handleImageChange(e.target.files)}
+              className="file-input"
+            />
 
             {images.length > 0 && (
               <div className="image-preview-list">

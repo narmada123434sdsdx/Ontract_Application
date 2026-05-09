@@ -245,3 +245,92 @@
     display: flex;
   }
 }
+
+/* =========================================================
+   FIX REGISTRATION + REPORTS DROPDOWN
+========================================================= */
+
+.registration-menu,
+.reports-menu {
+  position: relative;
+  cursor: pointer;
+}
+
+/* Dropdown hidden default */
+.reports-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  display: none;
+  flex-direction: column;
+  background: #ffffff;
+  min-width: 220px;
+  border-radius: 8px;
+  padding: 8px 0;
+  margin-top: 8px;
+  border: 1px solid #ddd;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+  z-index: 9999;
+}
+
+/* 🔥 OPEN WHEN CLICKED */
+.reports-dropdown.open {
+  display: flex;
+}
+
+/* Dropdown items */
+.reports-dropdown li {
+  width: 100%;
+  list-style: none;
+}
+
+/* Links */
+.reports-dropdown li a {
+  display: block;
+  padding: 12px 18px;
+  color: #333 !important;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* Hover */
+.reports-dropdown li a:hover {
+  background-color: #f2f4f8;
+  color: rgb(75, 120, 235) !important;
+  padding-left: 22px;
+}
+
+/* Navbar fix */
+.admin-navbar {
+  overflow: visible !important;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .reports-dropdown {
+    position: static;
+    display: none;
+    background: rgba(255,255,255,0.08);
+    box-shadow: none;
+    border: none;
+    margin-top: 0;
+  }
+
+  .reports-dropdown.open {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .reports-dropdown li a {
+    color: white !important;
+    padding: 10px;
+  }
+
+  .reports-dropdown li a:hover {
+    background: rgba(255,255,255,0.15);
+    color: white !important;
+    padding-left: 10px;
+  }
+}
